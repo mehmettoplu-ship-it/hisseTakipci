@@ -3,26 +3,28 @@ import Foundation
 enum SignalType: String, Codable, CaseIterable {
     case resistanceBreakout = "Direnç Kırıldı"
     case oversoldReversal   = "RSI Dip Dönüşü"
-    case macdBullishCross   = "MACD Altın Kesişim"
     case emaBullishCross    = "EMA Altın Kesişim"
+    case goldenCross        = "EMA Altın Haç"
     case bollingerBounce    = "Bollinger Dip Zıplama"
-    case ecHFTPro           = "EC HFT Pro"
+    case squeezeBounce      = "Sıkışma Patlaması"
     case rsiDivergence      = "RSI Boğa Diverjansı"
     case maStack            = "EMA Hizalanması"
     case breakoutRetest     = "Kırılma Geri Testi"
+    case trendPullback      = "Trend Desteği"
     case smartMomentum      = "Akıllı Momentum"
 
     var emoji: String {
         switch self {
         case .resistanceBreakout: return "🚀"
         case .oversoldReversal:   return "🔄"
-        case .macdBullishCross:   return "📈"
         case .emaBullishCross:    return "⚡"
-        case .bollingerBounce:    return "🎯"
-        case .ecHFTPro:           return "💹"
+        case .goldenCross:        return "🌟"
+        case .bollingerBounce:    return "🔻"
+        case .squeezeBounce:      return "💥"
         case .rsiDivergence:      return "🔀"
         case .maStack:            return "📊"
         case .breakoutRetest:     return "🎯"
+        case .trendPullback:      return "↩️"
         case .smartMomentum:      return "🧠"
         }
     }
@@ -31,13 +33,14 @@ enum SignalType: String, Codable, CaseIterable {
         switch self {
         case .resistanceBreakout: return "strategy_resistanceBreakout"
         case .oversoldReversal:   return "strategy_oversoldReversal"
-        case .macdBullishCross:   return "strategy_macdBullishCross"
         case .emaBullishCross:    return "strategy_emaBullishCross"
+        case .goldenCross:        return "strategy_goldenCross"
         case .bollingerBounce:    return "strategy_bollingerBounce"
-        case .ecHFTPro:           return "strategy_ecHFTPro"
+        case .squeezeBounce:      return "strategy_squeezeBounce"
         case .rsiDivergence:      return "strategy_rsiDivergence"
         case .maStack:            return "strategy_maStack"
         case .breakoutRetest:     return "strategy_breakoutRetest"
+        case .trendPullback:      return "strategy_trendPullback"
         case .smartMomentum:      return "strategy_smartMomentum"
         }
     }
@@ -68,7 +71,7 @@ struct Signal: Identifiable, Codable {
     let rsi: Double?
     let macdHistogram: Double?
     let volumeRatio: Double?
-    let dailyChangePercent: Double?  // (son kapanış - önceki kapanış) / önceki kapanış * 100
+    let dailyChangePercent: Double?
 
     var notificationTitle: String {
         "\(stock.symbol) — \(type.rawValue) (\(timeframe.displayName))"

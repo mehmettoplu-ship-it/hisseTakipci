@@ -24,13 +24,13 @@ enum StrategyScanner {
 
         // ─────────────────────────────────────────────────────────────────
         // 1. DİRENÇ KIRILMASI
-        // Yükseltilmiş filtre: hacim 2x+, RSI 42-68, confluence >= 2
+        // 20 günlük zirvenin %0.5 üzerinde kırılma + güçlü hacim
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.resistanceBreakout) {
             let high20 = candles.suffix(21).dropLast().map(\.high).max() ?? 0
-            if price > high20 * 1.005,        // en az %0.5 üstünde kırılma
-               volRatio >= 2.0,               // güçlü hacim (1.5→2.0)
-               ind.rsi > 42, ind.rsi < 68,   // aşırı alım yok
+            if price > high20 * 1.005,
+               volRatio >= 2.0,
+               ind.rsi > 42, ind.rsi < 68,
                confluence >= 2 {
                 signals.append(make(
                     stock: stock, type: .resistanceBreakout,
@@ -43,15 +43,13 @@ enum StrategyScanner {
 
         // ─────────────────────────────────────────────────────────────────
         // 2. RSI DİP DÖNÜŞÜ
-        // Daha derin aşırı satım (28), MACD onayı zorunlu, confluence >= 2
+        // RSI 28 altından yukarı döner + MACD histogramı negatiften pozitife geçer
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.oversoldReversal) {
             let prevRSI = TechnicalAnalysis.rsi(closes: Array(prevCloses))
-            if prevRSI < 28, ind.rsi >= 28,   // 30→28: daha derin dip
-               confluence >= 2 {
+            if prevRSI < 28, ind.rsi >= 28, confluence >= 2 {
                 let (_, _, prevHist) = TechnicalAnalysis.macd(closes: Array(prevCloses))
                 let macdConfirmed = (prevHist.last ?? 0) < 0 && ind.macdHistogram > 0
-                // MACD onayı olmadan sinyal üretme
                 if macdConfirmed {
                     signals.append(make(
                         stock: stock, type: .oversoldReversal,
@@ -64,32 +62,8 @@ enum StrategyScanner {
         }
 
         // ─────────────────────────────────────────────────────────────────
-        // 3. MACD ALTIN KESİŞİM
-        // Sıfır çizgisi altında kesişim + hacim onayı + RSI momentumu
-        // ─────────────────────────────────────────────────────────────────
-        if enabledStrategies.contains(.macdBullishCross) {
-            let (macdL, macdS, _) = TechnicalAnalysis.macd(closes: allCloses)
-            if macdL.count >= 2, macdS.count >= 2 {
-                let prevML = macdL[macdL.count - 2], prevMS = macdS[macdS.count - 2]
-                let crossedUp = prevML < prevMS && ind.macdLine > ind.macdSignal
-                if crossedUp,
-                   ind.macdLine < 0,         // sıfır altında daha güvenilir
-                   ind.rsi > 42, ind.rsi < 65,
-                   lastCandle.volume >= ind.avgVolume20 * 0.9,
-                   confluence >= 2 {
-                    signals.append(make(
-                        stock: stock, type: .macdBullishCross,
-                        strength: ind.macdHistogram > 0 && volRatio >= 1.5 ? .strong : .moderate,
-                        timeframe: timeframe, price: price, ind: ind,
-                        dailyChange: dailyChange
-                    ))
-                }
-            }
-        }
-
-        // ─────────────────────────────────────────────────────────────────
-        // 4. EMA ALTIN KESİŞİM (EMA9 > EMA21)
-        // Hacim onayı eklendi + RSI > 45, confluence >= 2
+        // 3. EMA ALTIN KESİŞİM (EMA9 > EMA21)
+        // Kısa vadeli momentum dönüşü — fiyat EMA50 üzerinde olmalı
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.emaBullishCross) {
             let prevEma9Arr  = TechnicalAnalysis.ema(values: Array(prevCloses), period: 9)
@@ -112,17 +86,41 @@ enum StrategyScanner {
         }
 
         // ─────────────────────────────────────────────────────────────────
+        // 4. EMA ALTIN HAÇ (EMA21 > EMA50)
+        // Orta vadeli trend dönüşü — EMA9/21'den çok daha güvenilir
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.goldenCross) {
+            let prevEma21Arr = TechnicalAnalysis.ema(values: Array(prevCloses), period: 21)
+            let prevEma50Arr = TechnicalAnalysis.ema(values: Array(prevCloses), period: 50)
+            if let pe21 = prevEma21Arr.last, let pe50 = prevEma50Arr.last {
+                let freshCross = pe21 <= pe50 && ind.ema21 > ind.ema50
+                if freshCross,
+                   price > ind.ema21,
+                   ind.rsi > 45, ind.rsi < 72,
+                   lastCandle.volume >= ind.avgVolume20,
+                   confluence >= 2 {
+                    signals.append(make(
+                        stock: stock, type: .goldenCross,
+                        strength: volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate,
+                        timeframe: timeframe, price: price, ind: ind,
+                        volRatio: volRatio, dailyChange: dailyChange
+                    ))
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
         // 5. BOLLİNGER DİP ZIPLAMASI
-        // RSI daha düşük eşik (38), mum alt yarıda açılıp üst yarıda kapanmış
+        // Alt banda değen önceki mum + boğa mumu kapanışı + RSI aşırı satım
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.bollingerBounce) {
-            let candleRange = lastCandle.high - lastCandle.low
+            let candleRange    = lastCandle.high - lastCandle.low
             let closeInUpperHalf = candleRange > 0 &&
                 (lastCandle.close - lastCandle.low) / candleRange > 0.5
             if prevCandle.low <= ind.bbLower,
                lastCandle.close > ind.bbLower,
-               ind.rsi < 38,                  // 45→38: daha gerçekçi aşırı satım
-               closeInUpperHalf,              // boğa mumu: üst yarıda kapanış
+               ind.rsi < 38,
+               closeInUpperHalf,
                confluence >= 2 {
                 signals.append(make(
                     stock: stock, type: .bollingerBounce,
@@ -134,46 +132,31 @@ enum StrategyScanner {
         }
 
         // ─────────────────────────────────────────────────────────────────
-        // 6. EC HFT PRO — değişmedi, zaten katı filtreler içeriyor
+        // 6. SIKIŞMA PATLAMASI
+        // ATR normal seviyenin %65'ine iner (düşük volatilite) → BB orta bandı
+        // yukarı kırar + hacim artar. Patlamadan önce sessizlik kalıbı.
         // ─────────────────────────────────────────────────────────────────
-        if enabledStrategies.contains(.ecHFTPro) {
-            let ud     = UserDefaults.standard
-            let stMult = { let v = ud.double(forKey: "echft_multiplier");  return v > 0 ? v : 1.5 }()
-            let stPer  = { let v = ud.integer(forKey: "echft_period");     return v > 0 ? v : 10  }()
-            let emaS   = { let v = ud.integer(forKey: "echft_emaShort");   return v > 0 ? v : 2   }()
-            let emaL   = { let v = ud.integer(forKey: "echft_emaLong");    return v > 0 ? v : 17  }()
+        if enabledStrategies.contains(.squeezeBounce) {
+            let shortATR = TechnicalAnalysis.atrArray(candles: Array(candles.suffix(20)), period: 10).last ?? 0
+            let baseATR  = TechnicalAnalysis.atrArray(candles: Array(candles.suffix(40)), period: 20).last ?? 0
+            let squeezed   = baseATR > 0 && shortATR < baseATR * 0.65
+            let breakingUp = price > ind.bbMiddle && lastCandle.close > lastCandle.open
+            let volOk      = lastCandle.volume > ind.avgVolume20 * 1.2
+            let rsiOk      = ind.rsi > 45 && ind.rsi < 68
 
-            let (_, stDirs) = TechnicalAnalysis.supertrend(candles: candles, multiplier: stMult, period: stPer)
-            let emaShortArr = TechnicalAnalysis.ema(values: allCloses, period: emaS)
-            let emaLongArr  = TechnicalAnalysis.ema(values: allCloses, period: emaL)
-
-            if stDirs.count >= 2,
-               let eSh = emaShortArr.last, let eLo = emaLongArr.last {
-                let lastDir = stDirs[stDirs.count - 1]
-                let prevDir = stDirs[stDirs.count - 2]
-                let stBull  = lastDir == 1
-                let emaBull = eSh > eLo && price > eLo
-                let volOk   = lastCandle.volume > ind.avgVolume20
-
-                if stBull && emaBull && volOk {
-                    let prevESh = TechnicalAnalysis.ema(values: Array(prevCloses), period: emaS).last ?? 0
-                    let prevELo = TechnicalAnalysis.ema(values: Array(prevCloses), period: emaL).last ?? 0
-                    let freshST  = prevDir == -1 && lastDir == 1
-                    let freshEMA = prevESh <= prevELo && eSh > eLo
-                    let isStrong = (freshST || freshEMA) && volRatio >= 1.5
-                    signals.append(make(
-                        stock: stock, type: .ecHFTPro,
-                        strength: isStrong ? .strong : .moderate,
-                        timeframe: timeframe, price: price, ind: ind,
-                        volRatio: volRatio, dailyChange: dailyChange
-                    ))
-                }
+            if squeezed && breakingUp && volOk && rsiOk && confluence >= 2 {
+                signals.append(make(
+                    stock: stock, type: .squeezeBounce,
+                    strength: volRatio >= 2.0 ? .strong : .moderate,
+                    timeframe: timeframe, price: price, ind: ind,
+                    volRatio: volRatio, dailyChange: dailyChange
+                ))
             }
         }
 
         // ─────────────────────────────────────────────────────────────────
         // 7. RSI BOĞA DİVERJANSI
-        // Fiyat daha düşük dip yaparken RSI daha yüksek dip — eşik 5 puana yükseltildi
+        // Fiyat daha düşük dip yaparken RSI daha yüksek dip — 5+ puan fark
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.rsiDivergence), candles.count >= 50 {
             let earlierStart = candles.count - 35
@@ -197,7 +180,6 @@ enum StrategyScanner {
                 let earlierRSI = TechnicalAnalysis.rsi(closes: Array(allCloses.prefix(earlierMinIdx + 1)))
                 let recentRSI  = TechnicalAnalysis.rsi(closes: Array(allCloses.prefix(recentMinIdx + 1)))
 
-                // Eşik 3→5 puan: daha az ama daha güvenilir diverjans
                 if recentRSI > earlierRSI + 5.0, recentRSI < 52 {
                     let mag = recentRSI - earlierRSI
                     signals.append(make(
@@ -212,13 +194,13 @@ enum StrategyScanner {
 
         // ─────────────────────────────────────────────────────────────────
         // 8. EMA HİZALANMASI (MA Stack)
-        // RSI eşiği 45→50, taze kesişim veya 2x hacim zorunlu
+        // EMA9 > EMA21 > EMA50 + fiyat EMA9 üzerinde + RSI momentum bölgesi
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.maStack) {
             let aligned    = ind.ema9 > ind.ema21 && ind.ema21 > ind.ema50
             let priceAbove = price > ind.ema9
             let volOk      = lastCandle.volume >= ind.avgVolume20 * 0.8
-            let rsiOk      = ind.rsi > 50 && ind.rsi < 72  // 45→50
+            let rsiOk      = ind.rsi > 50 && ind.rsi < 72
 
             if aligned && priceAbove && volOk && rsiOk {
                 let prevEma9  = TechnicalAnalysis.ema(values: Array(prevCloses), period: 9).last  ?? 0
@@ -240,34 +222,23 @@ enum StrategyScanner {
 
         // ─────────────────────────────────────────────────────────────────
         // 9. KIRILMA GERİ TESTİ
-        // Direnç kırıldı → geri çekilme → destek oldu → toparlanma
-        // En güvenilir giriş kalıplarından biri
+        // Direnç kırıldı → destek oldu → toparlanıyor — en güvenilir giriş kalıbı
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.breakoutRetest), candles.count >= 25 {
-            // Son 15 mumdan önceki 10 mumun en yüksek kapanışı = kırılan direnç
-            let breakoutWindow = candles[(candles.count - 25)..<(candles.count - 10)]
+            let breakoutWindow  = candles[(candles.count - 25)..<(candles.count - 10)]
             let resistanceLevel = breakoutWindow.map(\.high).max() ?? 0
-
-            // Kırılma: son 10 mum içinde direnç üstüne kapanmış mum var mı?
             let breakoutCandles = candles.suffix(10).dropLast(1)
             let breakoutOccurred = breakoutCandles.contains {
-                $0.close > resistanceLevel * 1.002   // en az %0.2 üstünde kapanış
+                $0.close > resistanceLevel * 1.002
             }
-
-            // Şu anki mum geri test bölgesinde mi? (direnç ±2%)
             let inRetestZone = price >= resistanceLevel * 0.985 &&
                                price <= resistanceLevel * 1.025
-
-            // Hacim: geri testte hacim azalmış olmalı (sağlıklı konsolidasyon)
-            let retestVol = lastCandle.volume < ind.avgVolume20 * 1.5
-
-            // Boğa mumu: kapanış açılışın üstünde
+            let retestVol    = lastCandle.volume < ind.avgVolume20 * 1.5
             let bullishCandle = lastCandle.close > lastCandle.open
 
             if breakoutOccurred && inRetestZone && retestVol && bullishCandle,
                ind.rsi > 45, ind.rsi < 65,
                confluence >= 2 {
-                // Güçlü sinyal: EMA50 üstünde ve önceki kırılmada yüksek hacim vardı
                 let breakoutHadVolume = breakoutCandles.contains {
                     $0.volume > ind.avgVolume20 * 1.8
                 }
@@ -281,29 +252,51 @@ enum StrategyScanner {
         }
 
         // ─────────────────────────────────────────────────────────────────
-        // 10. AKILLI MOMENTUM
-        // 5 bağımsız koşulun tamamı aynı anda doğru — çok az sinyal, yüksek kalite
+        // 10. TREND DESTEĞİ
+        // Yükselen trendde EMA21 veya EMA50'ye çekilme + boğa mumu onayı
+        // Trend takipçileri için en doğal giriş noktası
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.trendPullback) {
+            let inUptrend  = ind.ema9 > ind.ema21 && ind.ema21 > ind.ema50
+            let ema21Touch = price >= ind.ema21 * 0.985 && price <= ind.ema21 * 1.015
+            let ema50Touch = price >= ind.ema50 * 0.985 && price <= ind.ema50 * 1.015
+            let bullCandle = lastCandle.close > lastCandle.open &&
+                             (lastCandle.close - lastCandle.open) / lastCandle.open > 0.003
+            let volOk = lastCandle.volume >= ind.avgVolume20 * 0.8
+
+            if inUptrend && (ema21Touch || ema50Touch) && bullCandle && volOk,
+               ind.rsi > 38, ind.rsi < 60,
+               confluence >= 2 {
+                let isStrong = ema50Touch && volRatio >= 1.3 && ind.rsi > 42
+                signals.append(make(
+                    stock: stock, type: .trendPullback,
+                    strength: isStrong ? .strong : .moderate,
+                    timeframe: timeframe, price: price, ind: ind,
+                    volRatio: volRatio, dailyChange: dailyChange
+                ))
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // 11. AKILLI MOMENTUM
+        // 5 bağımsız koşulun tamamı doğru: SuperTrend + EMA + RSI + MACD + Hacim
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.smartMomentum) {
             let (_, stDirs) = TechnicalAnalysis.supertrend(
                 candles: candles, multiplier: 2.0, period: 14)
 
-            let c1_supertrend = stDirs.last == 1               // SuperTrend boğa
-            let c2_emaAlign   = ind.ema9 > ind.ema21 &&
-                                ind.ema21 > ind.ema50          // EMA hizalanma
-            let c3_rsi        = ind.rsi > 52 && ind.rsi < 68  // RSI momentum bölgesi
-            let c4_macd       = ind.macdLine > 0 &&
-                                ind.macdHistogram > 0          // MACD sıfır üstünde
-            let c5_volume     = lastCandle.volume > ind.avgVolume20 * 1.2 // hacim onayı
+            let c1_supertrend = stDirs.last == 1
+            let c2_emaAlign   = ind.ema9 > ind.ema21 && ind.ema21 > ind.ema50
+            let c3_rsi        = ind.rsi > 52 && ind.rsi < 68
+            let c4_macd       = ind.macdLine > 0 && ind.macdHistogram > 0
+            let c5_volume     = lastCandle.volume > ind.avgVolume20 * 1.2
 
             let conditionCount = [c1_supertrend, c2_emaAlign, c3_rsi, c4_macd, c5_volume]
                 .filter { $0 }.count
 
-            // Tüm 5 koşul doğru olmalı — 4 tanesi yeterli değil
             if conditionCount == 5 {
                 let prevEma9 = TechnicalAnalysis.ema(values: Array(prevCloses), period: 9).last ?? 0
                 let prevDir  = stDirs.count >= 2 ? stDirs[stDirs.count - 2] : 0
-                // Güçlü: SuperTrend yeni döndü VEYA hacim 2x+
                 let freshSignal = (prevDir == -1 && stDirs.last == 1) ||
                                   (prevEma9 < ind.ema9 * 0.998)
                 let isStrong = freshSignal && volRatio >= 1.5

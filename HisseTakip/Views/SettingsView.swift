@@ -12,12 +12,6 @@ struct SettingsView: View {
     // Otomatik Tarama
     @AppStorage("autoScanIntervalMinutes") private var autoScanInterval: Int = 15
 
-    // EC HFT Pro Parametreleri
-    @AppStorage("echft_multiplier") private var ecMultiplier: Double = 1.5
-    @AppStorage("echft_period")     private var ecPeriod:     Int    = 10
-    @AppStorage("echft_emaShort")   private var ecEmaShort:   Int    = 2
-    @AppStorage("echft_emaLong")    private var ecEmaLong:    Int    = 17
-
     private let intervalOptions = [5, 10, 15, 30, 60]
 
     var body: some View {
@@ -67,37 +61,6 @@ struct SettingsView: View {
                         Label("Sistem Bildirim Ayarları", systemImage: "gear.badge")
                             .foregroundStyle(.secondary)
                     }
-                }
-
-                // MARK: - EC HFT Pro Parametreleri
-                Section {
-                    HStack {
-                        Text("SuperTrend Çarpan")
-                        Spacer()
-                        Text(String(format: "%.1f", ecMultiplier))
-                            .foregroundStyle(.secondary).monospacedDigit()
-                    }
-                    Slider(value: $ecMultiplier, in: 0.5...5.0, step: 0.5)
-                        .tint(.yellow)
-
-                    Stepper("ST Periyot: \(ecPeriod)", value: $ecPeriod, in: 3...30)
-
-                    Stepper("EMA Kısa: \(ecEmaShort)", value: $ecEmaShort, in: 1...15)
-
-                    Stepper("EMA Uzun: \(ecEmaLong)", value: $ecEmaLong, in: 5...50)
-
-                    Button("Varsayılana Sıfırla") {
-                        ecMultiplier = 1.5
-                        ecPeriod     = 10
-                        ecEmaShort   = 2
-                        ecEmaLong    = 17
-                    }
-                    .foregroundStyle(.orange)
-                } header: {
-                    Text("EC HFT Pro Parametreleri")
-                } footer: {
-                    Text("Değişiklikler bir sonraki taramada uygulanır.")
-                        .font(.caption)
                 }
 
                 // MARK: - Stratejiler

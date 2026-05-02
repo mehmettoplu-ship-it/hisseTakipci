@@ -16,20 +16,23 @@ struct TechnicalIndicators {
 
 enum TechnicalAnalysis {
 
-    // MARK: - RSI (14 periyot)
+    // MARK: - RSI (14 periyot) — Wilder yumuşatması
     static func rsi(closes: [Double], period: Int = 14) -> Double {
         guard closes.count > period else { return 50 }
-        var gains = 0.0, losses = 0.0
-        for i in (closes.count - period) ..< closes.count {
+        var avgGain = 0.0, avgLoss = 0.0
+        for i in 1...period {
             let diff = closes[i] - closes[i - 1]
-            if diff > 0 { gains  += diff }
-            else        { losses -= diff }
+            if diff > 0 { avgGain += diff } else { avgLoss -= diff }
         }
-        let avgGain = gains  / Double(period)
-        let avgLoss = losses / Double(period)
+        avgGain /= Double(period)
+        avgLoss /= Double(period)
+        for i in (period + 1)..<closes.count {
+            let diff = closes[i] - closes[i - 1]
+            avgGain = (avgGain * Double(period - 1) + max(diff, 0)) / Double(period)
+            avgLoss = (avgLoss * Double(period - 1) + max(-diff, 0)) / Double(period)
+        }
         guard avgLoss > 0 else { return 100 }
-        let rs = avgGain / avgLoss
-        return 100 - (100 / (1 + rs))
+        return 100 - (100 / (1 + avgGain / avgLoss))
     }
 
     // MARK: - EMA
