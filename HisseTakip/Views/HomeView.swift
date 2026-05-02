@@ -272,9 +272,9 @@ struct HomeView: View {
                 targetTab: 3
             )
             statCard(
-                value: "\(scanner.signals.filter { $0.type == .ecHFTPro }.count)",
-                label: "EC HFT\nPro",
-                icon: "star.fill",
+                value: "\(scanner.signals.filter { $0.type == .smartMomentum }.count)",
+                label: "Akıllı\nMomentum",
+                icon: "brain.fill",
                 gradient: [Color(red: 1.0, green: 0.75, blue: 0.0), Color(red: 0.9, green: 0.5, blue: 0.0)],
                 targetTab: 3
             )

@@ -149,7 +149,7 @@ struct SignalCardView: View {
         }
     }
 
-    private var isECHFT: Bool { signal.type == .ecHFTPro }
+    private var isSmartMomentum: Bool { signal.type == .smartMomentum }
     private var isStrong: Bool { signal.strength == .strong }
 
     var body: some View {
@@ -166,7 +166,7 @@ struct SignalCardView: View {
                         .font(.system(size: 17, weight: .black))
                         .foregroundStyle(.primary)
 
-                    if isECHFT {
+                    if isSmartMomentum {
                         HStack(spacing: 3) {
                             Image(systemName: "star.fill")
                                 .font(.system(size: 7, weight: .black))
@@ -248,7 +248,7 @@ struct SignalCardView: View {
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
                         .strokeBorder(
-                            isECHFT
+                            isSmartMomentum
                                 ? LinearGradient(
                                     colors: [Color(red: 1.0, green: 0.75, blue: 0.1).opacity(0.7),
                                              Color(red: 1.0, green: 0.45, blue: 0.0).opacity(0.2),

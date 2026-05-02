@@ -87,9 +87,9 @@ struct ScannerView: View {
                     icon: "bolt.fill",
                     color: Color(red: 0.1, green: 0.85, blue: 0.55))
             Divider().frame(height: 40).opacity(0.5)
-            statBox(value: "\(vm.signals.filter { $0.type == .ecHFTPro }.count)",
-                    label: "EC HFT Pro",
-                    icon: "star.fill",
+            statBox(value: "\(vm.signals.filter { $0.type == .smartMomentum }.count)",
+                    label: "Akıllı Momentum",
+                    icon: "brain.fill",
                     color: Color(red: 1.0, green: 0.72, blue: 0.0))
         }
     }
