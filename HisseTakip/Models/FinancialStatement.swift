@@ -61,7 +61,7 @@ enum FinancialSignalType: String, CaseIterable, Codable {
 }
 
 struct FinancialSignal: Identifiable, Codable {
-    let id = UUID()
+    var id: UUID = UUID()
     let stock: Stock
     let type: FinancialSignalType
     let currentNetIncome: Double
@@ -71,11 +71,10 @@ struct FinancialSignal: Identifiable, Codable {
     let revenueChangePercent: Double
     let period: String
     let yoyNetIncomeChangePercent: Double?
-    // Ek alanlar
     let currentOperatingIncome: Double
     let operatingIncomeChangePercent: Double
-    let consecutiveImprovements: Int        // ardışık iyileşme sayısı (çeyrek)
-    let currentNetMargin: Double            // mevcut net kâr marjı (0.03 = %3)
-    let netMarginImprovement: Double        // marj değişimi (puan cinsinden)
-    let timestamp: Date = Date()
+    let consecutiveImprovements: Int
+    let currentNetMargin: Double
+    let netMarginImprovement: Double
+    var timestamp: Date = Date()
 }

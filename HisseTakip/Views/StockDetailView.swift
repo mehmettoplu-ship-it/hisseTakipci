@@ -294,7 +294,6 @@ struct StockDetailView: View {
 
     private var quarterlyTable: some View {
         VStack(spacing: 1) {
-            // Tablo başlığı
             HStack(spacing: 0) {
                 Text("Dönem").frame(width: 68, alignment: .leading)
                 Text("Gelir").frame(maxWidth: .infinity, alignment: .trailing)
@@ -307,40 +306,41 @@ struct StockDetailView: View {
             .padding(.vertical, 6)
 
             ForEach(Array(vm.statements.prefix(5).enumerated()), id: \.offset) { i, s in
-                HStack(spacing: 0) {
-                    Text(s.periodLabel)
-                        .font(.system(size: 11, weight: i == 0 ? .bold : .regular, design: .monospaced))
-                        .foregroundStyle(i == 0 ? .primary : .secondary)
-                        .frame(width: 68, alignment: .leading)
-
-                    Text(formatMoney(s.revenue))
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(i == 0 ? .primary : .secondary)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-
-                    Text(formatMoney(s.netIncome))
-                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(s.isProfit
-                            ? Color(red: 0.1, green: 0.85, blue: 0.55) : .red)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-
-                    Text(String(format: "%.1f%%", s.netMargin * 100))
-                        .font(.system(size: 11, design: .monospaced))
-                        .foregroundStyle(s.isProfit ? .secondary : .red.opacity(0.8))
-                        .frame(width: 54, alignment: .trailing)
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(i == 0
-                    ? Color(.systemBackground).opacity(0.6)
-                    : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                quarterlyRow(index: i, stmt: s)
             }
         }
         .background(
             RoundedRectangle(cornerRadius: 10)
                 .fill(Color(.systemGray6))
         )
+    }
+
+    private func quarterlyRow(index i: Int, stmt s: QuarterlyStatement) -> some View {
+        let netColor: Color = s.isProfit ? Color(red: 0.1, green: 0.85, blue: 0.55) : .red
+        let marginColor: Color = s.isProfit ? .secondary : .red.opacity(0.8)
+        let textStyle: Color = i == 0 ? .primary : .secondary
+        return HStack(spacing: 0) {
+            Text(s.periodLabel)
+                .font(.system(size: 11, weight: i == 0 ? .bold : .regular, design: .monospaced))
+                .foregroundStyle(textStyle)
+                .frame(width: 68, alignment: .leading)
+            Text(formatMoney(s.revenue))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(textStyle)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            Text(formatMoney(s.netIncome))
+                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                .foregroundStyle(netColor)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            Text(String(format: "%.1f%%", s.netMargin * 100))
+                .font(.system(size: 11, design: .monospaced))
+                .foregroundStyle(marginColor)
+                .frame(width: 54, alignment: .trailing)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(i == 0 ? Color(.systemBackground).opacity(0.6) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
     private func signalColor(_ type: FinancialSignalType) -> Color {

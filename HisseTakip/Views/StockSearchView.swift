@@ -267,7 +267,7 @@ struct StockSearchView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(.tertiary)
             VStack(spacing: 6) {
-                Text(""\(query.uppercased())" bulunamadı")
+                Text("\"\(query.uppercased())\" bulunamadı")
                     .font(.title3.weight(.bold))
                 Text("Sembolü veya şirket adını kontrol edin.\nÖrnek: THYAO, ADEL, BIMAS")
                     .font(.subheadline).foregroundStyle(.secondary)
