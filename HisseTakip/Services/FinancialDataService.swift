@@ -1,23 +1,19 @@
 import Foundation
 
-// Yahoo Finance quoteSummary — crumb token ile BIST hisseleri için çeyreklik gelir tablosu
+// İş Yatırım (isyatirim.com.tr) MaliTablo endpoint'i kullanılır.
+// Yahoo Finance'e göre çok daha güncel ve kapsamlı BIST veri kaynağı.
 actor FinancialDataService {
     static let shared = FinancialDataService()
 
-    private var cachedCrumb: String?
-    private var crumbFetchedAt: Date?
-    private var didBootstrap = false
+    private let baseURL = "https://www.isyatirim.com.tr/_layouts/15/IsYatirim.Website/Common/Data.aspx/MaliTablo"
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = 15
-        config.httpCookieStorage    = HTTPCookieStorage.shared
-        config.httpShouldSetCookies  = true
-        config.httpCookieAcceptPolicy = .always
         config.httpAdditionalHeaders = [
             "User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9"
+            "Accept":          "application/json, text/plain, */*",
+            "Accept-Language": "tr-TR,tr;q=0.9,en;q=0.8"
         ]
         return URLSession(configuration: config)
     }()
@@ -25,122 +21,159 @@ actor FinancialDataService {
     // MARK: - Ana Metot
 
     func fetchQuarterlyStatements(symbol: String) async throws -> [QuarterlyStatement] {
-        let yahooSymbol = symbol.hasSuffix(".IS") ? symbol : "\(symbol).IS"
-        let crumb = try await getOrFetchCrumb()
-        let stmts = try await fetchSummary(symbol: yahooSymbol, crumb: crumb)
+        let periods = recentQuarters(count: 4)
+
+        // XI_29: Standart TMS (çoğu sanayi şirketi)
+        // UFRS:  TFRS (holdingler, büyük şirketler)
+        // UFRS_K: Bankalar, sigorta şirketleri
+        for group in ["XI_29", "UFRS", "UFRS_K"] {
+            if let stmts = try? await fetch(symbol: symbol, periods: periods, group: group),
+               !stmts.isEmpty {
+                return stmts
+            }
+        }
+        return []
+    }
+
+    // MARK: - İstek
+
+    private func fetch(
+        symbol: String,
+        periods: [(year: Int, period: Int)],
+        group: String
+    ) async throws -> [QuarterlyStatement] {
+
+        var components = URLComponents(string: baseURL)!
+        var items: [URLQueryItem] = [
+            URLQueryItem(name: "companyCode",    value: symbol),
+            URLQueryItem(name: "exchange",       value: "TRY"),
+            URLQueryItem(name: "financialGroup", value: group)
+        ]
+        for (i, p) in periods.prefix(4).enumerated() {
+            let n = i + 1
+            items.append(URLQueryItem(name: "year\(n)",   value: "\(p.year)"))
+            items.append(URLQueryItem(name: "period\(n)", value: "\(p.period)"))
+        }
+        components.queryItems = items
+
+        guard let url = components.url else { throw FetchError.badURL }
+        var req = URLRequest(url: url)
+        req.setValue("https://www.isyatirim.com.tr", forHTTPHeaderField: "Referer")
+
+        let (data, response) = try await session.data(for: req)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw FetchError.badResponse
+        }
+
+        let stmts = parse(data: data, periods: periods)
         return stmts
     }
 
-    private func fetchSummary(symbol: String, crumb: String) async throws -> [QuarterlyStatement] {
-        guard let url = URL(string: "https://query1.finance.yahoo.com/v10/finance/quoteSummary/\(symbol)?modules=incomeStatementHistoryQuarterly&crumb=\(crumb)") else {
-            throw URLError(.badURL)
-        }
-        var req = URLRequest(url: url)
-        req.setValue("https://finance.yahoo.com", forHTTPHeaderField: "Referer")
-        let (data, response) = try await session.data(for: req)
-        guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
-        if http.statusCode == 401 || http.statusCode == 403 {
-            // Crumb bayatlamış — bir kez yenile
-            cachedCrumb = nil
-            let fresh = try await getOrFetchCrumb()
-            guard let retryURL = URL(string: "https://query1.finance.yahoo.com/v10/finance/quoteSummary/\(symbol)?modules=incomeStatementHistoryQuarterly&crumb=\(fresh)") else {
-                throw URLError(.badURL)
-            }
-            var retryReq = URLRequest(url: retryURL)
-            retryReq.setValue("https://finance.yahoo.com", forHTTPHeaderField: "Referer")
-            let (retryData, retryResp) = try await session.data(for: retryReq)
-            guard (retryResp as? HTTPURLResponse)?.statusCode == 200 else {
-                throw URLError(.badServerResponse)
-            }
-            return parseYahoo(retryData)
-        }
-        guard http.statusCode == 200 else { throw URLError(.badServerResponse) }
-        return parseYahoo(data)
-    }
+    // MARK: - JSON Çözümleme
 
-    // MARK: - Crumb
+    private func parse(
+        data: Data,
+        periods: [(year: Int, period: Int)]
+    ) -> [QuarterlyStatement] {
 
-    private func getOrFetchCrumb() async throws -> String {
-        // 30 dakika geçerliyse cache'den kullan
-        if let c = cachedCrumb,
-           let fetched = crumbFetchedAt,
-           Date().timeIntervalSince(fetched) < 1800 {
-            return c
-        }
-        // Önce finance.yahoo.com ana sayfasını ziyaret et — GDPR consent cookie (A3) buradan geliyor
-        // Sadece API endpoint'i ısıtmak bu cookie'yi set etmiyor, crumb 401 döndürüyor
-        if !didBootstrap {
-            didBootstrap = true
-            let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-            if let homeURL = URL(string: "https://finance.yahoo.com") {
-                var homeReq = URLRequest(url: homeURL)
-                homeReq.setValue(ua, forHTTPHeaderField: "User-Agent")
-                homeReq.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-                homeReq.setValue("text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", forHTTPHeaderField: "Accept")
-                homeReq.timeoutInterval = 12
-                _ = try? await session.data(for: homeReq)
-            }
-            if let warmURL = URL(string: "https://query2.finance.yahoo.com/v8/finance/chart/THYAO.IS?interval=1d&range=5d") {
-                var warmReq = URLRequest(url: warmURL)
-                warmReq.setValue(ua, forHTTPHeaderField: "User-Agent")
-                warmReq.setValue("https://finance.yahoo.com", forHTTPHeaderField: "Referer")
-                warmReq.timeoutInterval = 10
-                _ = try? await session.data(for: warmReq)
-            }
-        }
-        guard let url = URL(string: "https://query1.finance.yahoo.com/v1/test/getcrumb") else {
-            throw URLError(.badURL)
-        }
-        var crumbRequest = URLRequest(url: url)
-        crumbRequest.setValue(
-            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-            forHTTPHeaderField: "User-Agent")
-        crumbRequest.setValue("https://finance.yahoo.com", forHTTPHeaderField: "Referer")
-        crumbRequest.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
-        let (data, response) = try await session.data(for: crumbRequest)
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200,
-              let raw = String(data: data, encoding: .utf8)
-        else {
-            throw URLError(.cannotParseResponse)
-        }
-        let crumbStr = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Geçerli crumb: kısa alfanümerik dize (HTML veya JSON değil)
-        guard !crumbStr.isEmpty,
-              !crumbStr.hasPrefix("<"),
-              !crumbStr.hasPrefix("{"),
-              crumbStr.count < 30
-        else {
-            throw URLError(.cannotParseResponse)
-        }
-        cachedCrumb    = crumbStr
-        crumbFetchedAt = Date()
-        return crumbStr
-    }
-
-    // MARK: - JSON Parse
-
-    private func parseYahoo(_ data: Data) -> [QuarterlyStatement] {
         guard
-            let json  = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let qSum  = json["quoteSummary"] as? [String: Any],
-            let res   = (qSum["result"] as? [[String: Any]])?.first,
-            let hist  = res["incomeStatementHistoryQuarterly"] as? [String: Any],
-            let stmts = hist["incomeStatementHistory"] as? [[String: Any]]
+            let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+            let rows = json["value"] as? [[String: Any]],
+            !rows.isEmpty
         else { return [] }
 
-        return stmts.compactMap { s -> QuarterlyStatement? in
-            guard let ts = (s["endDate"] as? [String: Any])?["raw"] as? Int else { return nil }
-            let date = Date(timeIntervalSince1970: TimeInterval(ts))
-            func raw(_ key: String) -> Double {
-                (s[key] as? [String: Any])?["raw"] as? Double ?? 0
+        // --- Satır eşleştirme yardımcısı ---
+        func firstRow(trKeywords: [String], engKeywords: [String], trExclude: [String] = []) -> [String: Any]? {
+            rows.first { row in
+                let tr  = (row["itemDescTr"]  as? String ?? "").lowercased()
+                let eng = (row["itemDescEng"] as? String ?? "").lowercased()
+                let matchTr  = trKeywords.contains  { tr.contains($0)  }
+                let matchEng = engKeywords.contains { eng.contains($0) }
+                let excluded = trExclude.contains   { tr.contains($0)  }
+                return (matchTr || matchEng) && !excluded
             }
-            return QuarterlyStatement(
-                date: date,
-                revenue: raw("totalRevenue"),
-                netIncome: raw("netIncome"),
-                operatingIncome: raw("ebit")
-            )
         }
-        .sorted { $0.date > $1.date }
+
+        // Gelir (Satışlar / Hasılat)
+        let revRow = firstRow(
+            trKeywords:  ["satışlar", "hasılat", "net satış", "brüt satış"],
+            engKeywords: ["revenue", "net sales", "sales"],
+            trExclude:   ["maliyet", "gider", "iade"]
+        )
+
+        // Faaliyet Kârı
+        let opRow = firstRow(
+            trKeywords:  ["faaliyet kâr", "faaliyet kar", "esas faaliyet"],
+            engKeywords: ["operating profit", "operating income", "ebit"]
+        )
+
+        // Net Dönem Kârı
+        let niRow = firstRow(
+            trKeywords:  ["net dönem k", "dönem kâr", "dönem kar", "net dönem"],
+            engKeywords: ["net income", "net profit", "period profit", "net period"]
+        )
+
+        // En az bir temel satır zorunlu
+        guard revRow != nil || niRow != nil else { return [] }
+
+        var stmts: [QuarterlyStatement] = []
+
+        for p in periods {
+            let colKey = "\(p.year)/\(p.period)"
+
+            func val(_ row: [String: Any]?) -> Double {
+                guard let row else { return 0 }
+                if let v = row[colKey] as? Double { return v }
+                if let v = row[colKey] as? Int    { return Double(v) }
+                return 0
+            }
+
+            let rev = val(revRow)
+            let ni  = val(niRow)
+            let op  = val(opRow)
+
+            guard rev != 0 || ni != 0 else { continue }   // bu çeyrek verisi yok
+
+            // Dönem sonu tarihi (3 → Mart 31, 6 → Haz 30, 9 → Eyl 30, 12 → Ara 31)
+            var dc = DateComponents()
+            dc.year  = p.year
+            dc.month = p.period
+            dc.day   = p.period == 12 ? 31 : 30
+            let date = Calendar.current.date(from: dc) ?? Date()
+
+            stmts.append(QuarterlyStatement(
+                date: date, revenue: rev,
+                netIncome: ni, operatingIncome: op
+            ))
+        }
+
+        return stmts.sorted { $0.date > $1.date }
+    }
+
+    // MARK: - Çeyrek Hesaplama
+
+    private func recentQuarters(count: Int) -> [(year: Int, period: Int)] {
+        let cal   = Calendar.current
+        let now   = Date()
+        let month = cal.component(.month, from: now)
+        let year  = cal.component(.year,  from: now)
+
+        // Şirketler çeyrek bitiminden ~2 ay sonra bildiri verir
+        let (latestPeriod, latestYear): (Int, Int)
+        if      month <= 2  { (latestPeriod, latestYear) = (9,  year - 1) }  // Oca-Şub → Q3 geçen yıl
+        else if month <= 4  { (latestPeriod, latestYear) = (12, year - 1) }  // Mar-Nis → Q4 geçen yıl
+        else if month <= 7  { (latestPeriod, latestYear) = (3,  year)     }  // May-Tem → Q1 bu yıl
+        else if month <= 10 { (latestPeriod, latestYear) = (6,  year)     }  // Ağu-Eki → Q2 bu yıl
+        else                { (latestPeriod, latestYear) = (9,  year)     }  // Kas-Ara → Q3 bu yıl
+
+        var result: [(Int, Int)] = []
+        var p = latestPeriod
+        var y = latestYear
+
+        for _ in 0..<count {
+            result.append((y, p))
+            if p == 3 { p = 12; y -= 1 } else { p -= 3 }
+        }
+        return result
     }
 }

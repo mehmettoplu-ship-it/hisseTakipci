@@ -145,7 +145,7 @@ struct BilancoView: View {
                     }
                 }
                 .font(.caption.weight(.medium))
-                Text("Kaynak: Yahoo Finance")
+                Text("Kaynak: İş Yatırım")
                     .font(.caption2).foregroundStyle(.tertiary)
             }
             Spacer()
@@ -201,7 +201,7 @@ struct BilancoView: View {
                         .font(.subheadline).foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
-                Text("Kaynak: Yahoo Finance")
+                Text("Kaynak: İş Yatırım")
                     .font(.caption2).foregroundStyle(.tertiary)
                     .padding(.top, 4)
             }
