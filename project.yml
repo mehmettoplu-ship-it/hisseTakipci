@@ -1,0 +1,57 @@
+name: HisseTakip
+options:
+  bundleIdPrefix: com.mehmet
+  deploymentTarget:
+    iOS: "17.0"
+  xcodeVersion: "16"
+
+targets:
+  HisseTakip:
+    type: application
+    platform: iOS
+    sources:
+      - path: HisseTakip
+    resources:
+      - path: HisseTakip/Assets.xcassets
+    info:
+      path: HisseTakip/Info.plist
+      properties:
+        CFBundleDisplayName: Hisse Takip
+        UILaunchScreen:
+          UIColorName: ""
+        UIBackgroundModes:
+          - fetch
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.mehmet.hissetakip.scan
+        NSUserNotificationUsageDescription: "Hisse sinyalleri için bildirim izni gerekiyor"
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        LSApplicationQueriesSchemes:
+          - tradingview
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+          NSExceptionDomains:
+            finance.yahoo.com:
+              NSExceptionAllowsInsecureHTTPLoads: false
+              NSIncludesSubdomains: true
+            query1.finance.yahoo.com:
+              NSExceptionAllowsInsecureHTTPLoads: false
+              NSIncludesSubdomains: true
+            query2.finance.yahoo.com:
+              NSExceptionAllowsInsecureHTTPLoads: false
+              NSIncludesSubdomains: true
+            fvt.com.tr:
+              NSExceptionAllowsInsecureHTTPLoads: false
+              NSIncludesSubdomains: true
+            www.tradingview.com:
+              NSExceptionAllowsInsecureHTTPLoads: false
+              NSIncludesSubdomains: true
+    settings:
+      base:
+        SWIFT_VERSION: "5.10"
+        TARGETED_DEVICE_FAMILY: "1"
+        PRODUCT_BUNDLE_IDENTIFIER: com.mehmet.hissetakip
+        MARKETING_VERSION: "1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_FILE: HisseTakip/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon

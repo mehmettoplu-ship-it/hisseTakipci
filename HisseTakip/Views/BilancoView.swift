@@ -1,0 +1,367 @@
+import SwiftUI
+
+struct BilancoView: View {
+    @EnvironmentObject private var scanner: ScannerViewModel
+    @StateObject private var vm = BilancoViewModel()
+    @State private var filterType: FinancialSignalType?
+
+    private var filtered: [FinancialSignal] {
+        guard let f = filterType else { return vm.signals }
+        return vm.signals.filter { $0.type == f }
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                statsBar
+                    .padding(.vertical, 12)
+                Divider().opacity(0.4)
+
+                Group {
+                    if vm.isScanning {
+                        scanningView
+                    } else if vm.signals.isEmpty {
+                        idleView
+                    } else {
+                        signalList
+                    }
+                }
+
+                scanButton
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 24)
+            }
+            .navigationTitle("Bilanço Tarayıcı")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if !vm.signals.isEmpty {
+                    ToolbarItem(placement: .topBarTrailing) { filterMenu }
+                }
+            }
+        }
+    }
+
+    // MARK: - İstatistik Çubuğu
+
+    private var statsBar: some View {
+        HStack(spacing: 0) {
+            statBox(count: vm.signals.filter { $0.type == .turningProfitable }.count,
+                    label: "Kara\nGeçiş", color: Color(red: 0.1, green: 0.85, blue: 0.55))
+            Divider().frame(height: 40).opacity(0.5)
+            statBox(count: vm.signals.filter { $0.type == .lossReducing }.count,
+                    label: "Zarar\nAzalıyor", color: Color(red: 0.2, green: 0.6, blue: 1.0))
+            Divider().frame(height: 40).opacity(0.5)
+            statBox(count: vm.signals.filter { $0.type == .profitGrowing }.count,
+                    label: "Kar\nBüyüyor", color: Color(red: 1.0, green: 0.72, blue: 0.0))
+            Divider().frame(height: 40).opacity(0.5)
+            statBox(count: vm.signals.filter { $0.type == .revenueGrowing }.count,
+                    label: "Gelir\nArtışı", color: Color(red: 0.7, green: 0.3, blue: 1.0))
+        }
+    }
+
+    private func statBox(count: Int, label: String, color: Color) -> some View {
+        VStack(spacing: 3) {
+            Text("\(count)")
+                .font(.system(size: 20, weight: .black, design: .rounded))
+                .foregroundStyle(count > 0 ? color : .secondary)
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Taranıyor
+
+    private var scanningView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+            ZStack {
+                Circle()
+                    .stroke(Color(.systemGray5), lineWidth: 5)
+                    .frame(width: 100, height: 100)
+                Circle()
+                    .trim(from: 0, to: vm.progress)
+                    .stroke(
+                        LinearGradient(colors: [Color(red: 0.1, green: 0.85, blue: 0.55),
+                                                Color(red: 0.0, green: 0.6, blue: 0.38)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing),
+                        style: StrokeStyle(lineWidth: 5, lineCap: .round)
+                    )
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 100, height: 100)
+                    .animation(.easeInOut(duration: 0.35), value: vm.progress)
+                VStack(spacing: 0) {
+                    Text("\(Int(vm.progress * 100))")
+                        .font(.system(size: 22, weight: .black, design: .monospaced))
+                    Text("%")
+                        .font(.system(size: 11, weight: .semibold)).foregroundStyle(.secondary)
+                }
+            }
+            VStack(spacing: 6) {
+                Text("\(vm.scannedCount) / \(vm.totalCount)")
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                Text("bilanço analiz ediliyor…")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                Text("Kaynak: Yahoo Finance")
+                    .font(.caption2).foregroundStyle(.tertiary)
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Boş Ekran
+
+    private var idleView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(
+                        colors: [Color(red: 0.1, green: 0.85, blue: 0.55).opacity(0.15), .clear],
+                        center: .center, startRadius: 0, endRadius: 55))
+                    .frame(width: 110, height: 110)
+                Image(systemName: "building.columns.fill")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [Color(red: 0.1, green: 0.85, blue: 0.55), .mint],
+                            startPoint: .top, endPoint: .bottom))
+            }
+            VStack(spacing: 6) {
+                if vm.hasScanned {
+                    if vm.fetchErrors > 0 && vm.dataFoundCount == 0 {
+                        Text("Veri Alınamadı")
+                            .font(.title3.weight(.bold))
+                        Text("Yahoo Finance'e bağlanılamadı veya kimlik\ndoğrulaması başarısız oldu")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        Text("Hata: \(vm.fetchErrors) / \(vm.totalCount) hisse")
+                            .font(.caption).foregroundStyle(.red.opacity(0.8))
+                            .padding(.top, 2)
+                    } else if vm.dataFoundCount > 0 {
+                        Text("Sinyal Bulunamadı")
+                            .font(.title3.weight(.bold))
+                        Text("\(vm.dataFoundCount) şirketin bilanço verisi analiz edildi\nBelirlenen kriterleri karşılayan sinyal yok")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    } else {
+                        Text("Bilanço Verisi Yok")
+                            .font(.title3.weight(.bold))
+                        Text("Yahoo Finance'de BIST bilanço verisi bulunamadı")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                } else {
+                    Text("Bilanço Taramasına Hazır")
+                        .font(.title3.weight(.bold))
+                    Text("Kara geçen, zararını azaltan veya\ngeliri büyüyen şirketleri bulur")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                Text("Kaynak: Yahoo Finance")
+                    .font(.caption2).foregroundStyle(.tertiary)
+                    .padding(.top, 4)
+            }
+            Spacer()
+        }
+    }
+
+    // MARK: - Sinyal Listesi
+
+    private var signalList: some View {
+        List(filtered) { sig in
+            NavigationLink {
+                StockDetailView(stock: sig.stock)
+            } label: {
+                FinancialSignalCard(signal: sig)
+            }
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(.init(top: 6, leading: 14, bottom: 6, trailing: 14))
+        }
+        .listStyle(.plain)
+    }
+
+    // MARK: - Tara Butonu
+
+    private var scanButton: some View {
+        Button {
+            if vm.isScanning {
+                vm.cancelScan()
+            } else {
+                vm.startScan(stocks: scanner.stockList)
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: vm.isScanning ? "stop.circle.fill" : "building.columns.circle.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                Text(vm.isScanning ? "Taramayı Durdur" : "Tüm BIST Bilanço Tara")
+                    .font(.system(size: 16, weight: .bold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 17)
+            .background(
+                Group {
+                    if vm.isScanning {
+                        LinearGradient(colors: [Color(red: 0.9, green: 0.15, blue: 0.15),
+                                                Color(red: 0.75, green: 0.08, blue: 0.08)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                    } else {
+                        LinearGradient(colors: [Color(red: 0.1, green: 0.75, blue: 0.45),
+                                                Color(red: 0.0, green: 0.52, blue: 0.3)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                    }
+                }
+            )
+            .foregroundStyle(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .shadow(
+                color: vm.isScanning
+                    ? Color.red.opacity(0.35)
+                    : Color(red: 0.1, green: 0.75, blue: 0.45).opacity(0.4),
+                radius: 12, y: 5
+            )
+        }
+        .scaleEffect(vm.isScanning ? 0.98 : 1.0)
+        .animation(.spring(response: 0.3), value: vm.isScanning)
+    }
+
+    // MARK: - Filtre Menüsü
+
+    private var filterMenu: some View {
+        Menu {
+            Button("Tümü") { filterType = nil }
+            ForEach(FinancialSignalType.allCases, id: \.self) { t in
+                Button("\(t.emoji) \(t.rawValue)") { filterType = t }
+            }
+        } label: {
+            let active = filterType != nil
+            Image(systemName: active
+                  ? "line.3.horizontal.decrease.circle.fill"
+                  : "line.3.horizontal.decrease.circle")
+            .foregroundStyle(active ? .green : .secondary)
+            .font(.system(size: 18))
+        }
+    }
+}
+
+// MARK: - Finansal Sinyal Kartı
+
+struct FinancialSignalCard: View {
+    let signal: FinancialSignal
+
+    private var typeColor: Color {
+        switch signal.type {
+        case .turningProfitable: return Color(red: 0.1, green: 0.85, blue: 0.55)
+        case .lossReducing:      return Color(red: 0.2, green: 0.6, blue: 1.0)
+        case .profitGrowing:     return Color(red: 1.0, green: 0.72, blue: 0.0)
+        case .revenueGrowing:    return Color(red: 0.7, green: 0.3, blue: 1.0)
+        }
+    }
+
+    var body: some View {
+        HStack(spacing: 0) {
+            typeColor
+                .frame(width: 4)
+                .clipShape(RoundedRectangle(cornerRadius: 2))
+
+            VStack(alignment: .leading, spacing: 8) {
+                // Başlık
+                HStack(spacing: 6) {
+                    Text(signal.stock.symbol)
+                        .font(.system(size: 16, weight: .black))
+                    Text(signal.type.emoji + " " + signal.type.rawValue)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(typeColor)
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(typeColor.opacity(0.12))
+                        .clipShape(Capsule())
+                    Spacer()
+                    Text(signal.period)
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(Color(.tertiarySystemFill))
+                        .clipShape(Capsule())
+                }
+
+                // Finansal veriler
+                HStack(spacing: 0) {
+                    financialChip(label: "Net Kar",
+                                  value: formatMoney(signal.currentNetIncome),
+                                  valueColor: signal.currentNetIncome >= 0
+                                    ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                    : Color(red: 1.0, green: 0.28, blue: 0.32))
+
+                    cardDivider()
+
+                    financialChip(label: "Değişim",
+                                  value: String(format: "%+.0f%%", signal.netIncomeChangePercent),
+                                  valueColor: signal.netIncomeChangePercent >= 0
+                                    ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                    : Color(red: 1.0, green: 0.28, blue: 0.32))
+
+                    cardDivider()
+
+                    financialChip(label: "Gelir",
+                                  value: formatMoney(signal.currentRevenue),
+                                  valueColor: nil)
+
+                    if let yoy = signal.yoyNetIncomeChangePercent {
+                        cardDivider()
+                        financialChip(label: "YoY",
+                                      value: String(format: "%+.0f%%", yoy),
+                                      valueColor: yoy >= 0
+                                        ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                        : Color(red: 1.0, green: 0.28, blue: 0.32))
+                    }
+                    Spacer()
+                }
+            }
+            .padding(.vertical, 13)
+            .padding(.horizontal, 13)
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(
+                            LinearGradient(
+                                colors: [typeColor.opacity(0.35), .clear],
+                                startPoint: .topLeading, endPoint: .bottomTrailing),
+                            lineWidth: 1)
+                )
+        )
+        .shadow(color: typeColor.opacity(0.12), radius: 8, y: 3)
+    }
+
+    private func financialChip(label: String, value: String, valueColor: Color?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.tertiary)
+            Text(value)
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(valueColor ?? .primary)
+        }
+    }
+
+    private func cardDivider() -> some View {
+        Rectangle()
+            .fill(Color(.separator).opacity(0.5))
+            .frame(width: 1, height: 20)
+            .padding(.horizontal, 9)
+    }
+
+    private func formatMoney(_ v: Double) -> String {
+        let abs = Swift.abs(v)
+        let prefix = v < 0 ? "-" : ""
+        if abs >= 1_000_000_000 { return "\(prefix)\(String(format: "%.1f", abs / 1_000_000_000))B₺" }
+        if abs >= 1_000_000     { return "\(prefix)\(String(format: "%.0f", abs / 1_000_000))M₺" }
+        if abs >= 1_000         { return "\(prefix)\(String(format: "%.0f", abs / 1_000))K₺" }
+        return "\(prefix)\(String(format: "%.0f", abs))₺"
+    }
+}

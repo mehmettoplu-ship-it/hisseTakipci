@@ -1,0 +1,79 @@
+name: Build IPA
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          # 22F77 veya daha yeni runtime ile eşleşen Xcode seç
+          sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer 2>/dev/null || \
+          sudo xcode-select -s /Applications/Xcode_16.3.app/Contents/Developer 2>/dev/null || \
+          sudo xcode-select -s /Applications/Xcode_16.2.app/Contents/Developer 2>/dev/null || \
+          sudo xcode-select -s /Applications/Xcode_16.app/Contents/Developer
+          xcodebuild -version
+          echo "=== SDK Build Version ==="
+          xcrun --sdk iphoneos --show-sdk-build-version
+          echo "=== Installed iOS Simulator Runtimes ==="
+          xcrun simctl list runtimes 2>/dev/null | grep iOS | head -8 || true
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: |
+          xcodegen generate
+          xcodebuild -list -project HisseTakip.xcodeproj
+
+      - name: Generate icon sizes from icon_1024.png
+        run: |
+          DIR="HisseTakip/Assets.xcassets/AppIcon.appiconset"
+          SRC="$DIR/icon_1024.png"
+          sips -z 1024 1024 "$SRC"
+          sips -z 180 180   "$SRC" --out "$DIR/icon_180.png"
+          sips -z 120 120   "$SRC" --out "$DIR/icon_120.png"
+          sips -z 80  80    "$SRC" --out "$DIR/icon_80.png"
+          sips -z 60  60    "$SRC" --out "$DIR/icon_60.png"
+          sips -z 40  40    "$SRC" --out "$DIR/icon_40.png"
+
+      - name: Build (Release / iphoneos)
+        run: |
+          xcodebuild \
+            -project HisseTakip.xcodeproj \
+            -scheme HisseTakip \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=YES \
+            AD_HOC_CODE_SIGNING_ALLOWED=YES \
+            ONLY_ACTIVE_ARCH=NO \
+            build
+
+      - name: Package IPA
+        run: |
+          APP_PATH=$(find "$RUNNER_TEMP/DerivedData" -name "*.app" -type d \
+            | grep -v "PlugIns\|Tests" | head -1)
+          echo "App: $APP_PATH"
+          mkdir -p "$RUNNER_TEMP/Payload"
+          cp -r "$APP_PATH" "$RUNNER_TEMP/Payload/HisseTakip.app"
+          cd "$RUNNER_TEMP"
+          zip -r "HisseTakip.ipa" Payload/
+          echo "IPA boyutu: $(du -sh HisseTakip.ipa)"
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: HisseTakip-IPA
+          path: ${{ runner.temp }}/HisseTakip.ipa
+          retention-days: 30
