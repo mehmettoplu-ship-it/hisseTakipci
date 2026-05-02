@@ -33,9 +33,6 @@ struct HisseTakipApp: App {
                 break
             }
         }
-        .task {
-            await NotificationManager.shared.requestPermission()
-        }
     }
 
     // MARK: - Kayıt
