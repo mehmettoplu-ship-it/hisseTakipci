@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ScannerView: View {
     @EnvironmentObject private var vm: ScannerViewModel
+    @State private var selectedStrategy: SignalType? = nil
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,10 @@ struct ScannerView: View {
                         }
                     }
                 }
+            }
+            .sheet(item: $selectedStrategy) { type in
+                StrategySignalSheet(type: type)
+                    .environmentObject(vm)
             }
         }
     }
@@ -246,24 +251,31 @@ struct ScannerView: View {
             spacing: 8
         ) {
             ForEach(sorted, id: \.key) { type, sigs in
-                VStack(spacing: 4) {
-                    Text("\(sigs.count)")
-                        .font(.system(size: 18, weight: .black, design: .rounded))
-                        .foregroundStyle(.primary)
-                    Text(type.emoji)
-                        .font(.system(size: 14))
-                    Text(shortName(type))
-                        .font(.system(size: 9, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
+                Button { selectedStrategy = type } label: {
+                    VStack(spacing: 4) {
+                        Text("\(sigs.count)")
+                            .font(.system(size: 18, weight: .black, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Text(type.emoji)
+                            .font(.system(size: 14))
+                        Text(shortName(type))
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color(.secondarySystemBackground))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .strokeBorder(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.2), lineWidth: 1)
+                            )
+                    )
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.secondarySystemBackground))
-                )
+                .buttonStyle(.plain)
             }
         }
     }
@@ -358,5 +370,60 @@ struct ScannerView: View {
         case .candlePattern:      return "Mum\nFormas."
         case .weeklyBreakout:     return "52H\nZirve"
         }
+    }
+}
+
+// MARK: - Strateji Sinyal Sheet
+
+private struct StrategySignalSheet: View {
+    let type: SignalType
+    @EnvironmentObject var vm: ScannerViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    private var signals: [Signal] {
+        vm.sortedSignals.filter { $0.type == type }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if signals.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
+                        Text("Bu strateji için sinyal yok")
+                            .font(.title3.weight(.bold))
+                        Text("Son taramada \(type.rawValue) sinyali bulunamadı.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List(signals) { signal in
+                        NavigationLink {
+                            StockDetailView(stock: signal.stock)
+                        } label: {
+                            SignalCardView(signal: signal)
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(.init(top: 6, leading: 14, bottom: 6, trailing: 14))
+                    }
+                    .listStyle(.plain)
+                }
+            }
+            .navigationTitle(type.emoji + " " + type.rawValue)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Kapat") { dismiss() }
+                        .font(.system(size: 15, weight: .semibold))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }

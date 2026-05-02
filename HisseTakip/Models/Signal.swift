@@ -1,6 +1,7 @@
 import Foundation
 
-enum SignalType: String, Codable, CaseIterable {
+enum SignalType: String, Codable, CaseIterable, Identifiable {
+    var id: String { rawValue }
     case resistanceBreakout = "Direnç Kırıldı"
     case oversoldReversal   = "RSI Dip Dönüşü"
     case emaBullishCross    = "EMA Altın Kesişim"
