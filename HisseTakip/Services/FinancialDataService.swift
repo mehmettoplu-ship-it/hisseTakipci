@@ -9,7 +9,7 @@ actor FinancialDataService {
 
     private let session: URLSession = {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15
+        config.timeoutIntervalForRequest = 20
         config.httpAdditionalHeaders = [
             "User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
             "Accept":          "application/json, text/plain, */*",
@@ -23,9 +23,9 @@ actor FinancialDataService {
     func fetchQuarterlyStatements(symbol: String) async throws -> [QuarterlyStatement] {
         let periods = recentQuarters(count: 4)
 
-        // XI_29: Standart TMS (çoğu sanayi şirketi)
-        // UFRS:  TFRS (holdingler, büyük şirketler)
-        // UFRS_K: Bankalar, sigorta şirketleri
+        // XI_29: Standart TMS (çoğu sanayi/ticaret şirketi)
+        // UFRS:  TFRS konsolide (büyük şirketler, holdingler)
+        // UFRS_K: Bankalar ve sigorta şirketleri
         for group in ["XI_29", "UFRS", "UFRS_K"] {
             if let stmts = try? await fetch(symbol: symbol, periods: periods, group: group),
                !stmts.isEmpty {
@@ -65,8 +65,7 @@ actor FinancialDataService {
             throw FetchError.badResponse
         }
 
-        let stmts = parse(data: data, periods: periods)
-        return stmts
+        return parse(data: data, periods: periods)
     }
 
     // MARK: - JSON Çözümleme
@@ -82,49 +81,58 @@ actor FinancialDataService {
             !rows.isEmpty
         else { return [] }
 
-        // --- Satır eşleştirme yardımcısı ---
+        // Satır eşleştirme — trKeywords veya engKeywords içerip trExclude içermeyen ilk satır
         func firstRow(trKeywords: [String], engKeywords: [String], trExclude: [String] = []) -> [String: Any]? {
             rows.first { row in
                 let tr  = (row["itemDescTr"]  as? String ?? "").lowercased()
                 let eng = (row["itemDescEng"] as? String ?? "").lowercased()
-                let matchTr  = trKeywords.contains  { tr.contains($0)  }
-                let matchEng = engKeywords.contains { eng.contains($0) }
+                let hit      = trKeywords.contains  { tr.contains($0)  } ||
+                               engKeywords.contains { eng.contains($0) }
                 let excluded = trExclude.contains   { tr.contains($0)  }
-                return (matchTr || matchEng) && !excluded
+                return hit && !excluded
             }
         }
 
-        // Gelir (Satışlar / Hasılat)
+        // ── Gelir (Revenue) ──────────────────────────────────────────────────
+        // XI_29: "Satış Gelirleri" (3C) | UFRS: "Hasılat"
         let revRow = firstRow(
-            trKeywords:  ["satışlar", "hasılat", "net satış", "brüt satış"],
-            engKeywords: ["revenue", "net sales", "sales"],
-            trExclude:   ["maliyet", "gider", "iade"]
+            trKeywords:  ["satış gelir", "net satış", "brüt satış", "hasılat"],
+            engKeywords: ["net sales", "revenue", "sales revenue"],
+            trExclude:   ["maliyet", "pazarlama", "iade", "gider", "brüt kar", "brüt kâr"]
         )
 
-        // Faaliyet Kârı
+        // ── Faaliyet Kârı (Operating Income) ────────────────────────────────
+        // XI_29: "FAALİYET KARI (ZARARI)" (3DF) | UFRS: "Esas Faaliyet Kârı"
         let opRow = firstRow(
-            trKeywords:  ["faaliyet kâr", "faaliyet kar", "esas faaliyet"],
-            engKeywords: ["operating profit", "operating income", "ebit"]
+            trKeywords:  ["faaliyet kar", "faaliyet kâr", "esas faaliyet"],
+            engKeywords: ["operating profit", "operating income", "operating profits"]
         )
 
-        // Net Dönem Kârı
+        // ── Net Dönem Kârı (Net Income) ──────────────────────────────────────
+        // XI_29: "DÖNEM KARI/ZARARI" (3J/3L)
+        // UFRS:  "Dönem Net Kârı (Zararı)" veya "Ana Ortaklık Payları"
         let niRow = firstRow(
-            trKeywords:  ["net dönem k", "dönem kâr", "dönem kar", "net dönem"],
-            engKeywords: ["net income", "net profit", "period profit", "net period"]
+            trKeywords:  ["dönem kari", "dönem kâri", "dönem kar/", "dönem kâr/",
+                          "net dönem k", "dönem net k"],
+            engKeywords: ["net profit after tax", "profit from continuing",
+                          "net income", "period profit", "net period"]
         )
 
-        // En az bir temel satır zorunlu
         guard revRow != nil || niRow != nil else { return [] }
 
         var stmts: [QuarterlyStatement] = []
 
-        for p in periods {
-            let colKey = "\(p.year)/\(p.period)"
+        for (i, p) in periods.enumerated() {
+            // Kolon anahtarı: API sırasıyla value1, value2, value3, value4 döndürür
+            let colKey = "value\(i + 1)"
 
             func val(_ row: [String: Any]?) -> Double {
                 guard let row else { return 0 }
+                // API bazen number, bazen string gönderir
                 if let v = row[colKey] as? Double { return v }
                 if let v = row[colKey] as? Int    { return Double(v) }
+                if let s = row[colKey] as? String,
+                   let v = Double(s.replacingOccurrences(of: ",", with: ".")) { return v }
                 return 0
             }
 
@@ -132,9 +140,9 @@ actor FinancialDataService {
             let ni  = val(niRow)
             let op  = val(opRow)
 
-            guard rev != 0 || ni != 0 else { continue }   // bu çeyrek verisi yok
+            guard rev != 0 || ni != 0 else { continue }   // bu çeyreğe veri yok
 
-            // Dönem sonu tarihi (3 → Mart 31, 6 → Haz 30, 9 → Eyl 30, 12 → Ara 31)
+            // Dönem sonu tarihi (3→Mart31, 6→Haz30, 9→Eyl30, 12→Ara31)
             var dc = DateComponents()
             dc.year  = p.year
             dc.month = p.period
@@ -158,13 +166,14 @@ actor FinancialDataService {
         let month = cal.component(.month, from: now)
         let year  = cal.component(.year,  from: now)
 
-        // Şirketler çeyrek bitiminden ~2 ay sonra bildiri verir
-        let (latestPeriod, latestYear): (Int, Int)
-        if      month <= 2  { (latestPeriod, latestYear) = (9,  year - 1) }  // Oca-Şub → Q3 geçen yıl
-        else if month <= 4  { (latestPeriod, latestYear) = (12, year - 1) }  // Mar-Nis → Q4 geçen yıl
-        else if month <= 7  { (latestPeriod, latestYear) = (3,  year)     }  // May-Tem → Q1 bu yıl
-        else if month <= 10 { (latestPeriod, latestYear) = (6,  year)     }  // Ağu-Eki → Q2 bu yıl
-        else                { (latestPeriod, latestYear) = (9,  year)     }  // Kas-Ara → Q3 bu yıl
+        // Şirketler çeyrek bitiminden ~2 ay sonra KAP'a bildirir
+        let latestPeriod: Int
+        let latestYear:   Int
+        if      month <= 2  { latestPeriod = 9;  latestYear = year - 1 }  // Oca-Şub → Q3 geçen yıl
+        else if month <= 4  { latestPeriod = 12; latestYear = year - 1 }  // Mar-Nis → Q4 geçen yıl
+        else if month <= 7  { latestPeriod = 3;  latestYear = year     }  // May-Tem → Q1 bu yıl
+        else if month <= 10 { latestPeriod = 6;  latestYear = year     }  // Ağu-Eki → Q2 bu yıl
+        else                { latestPeriod = 9;  latestYear = year     }  // Kas-Ara → Q3 bu yıl
 
         var result: [(Int, Int)] = []
         var p = latestPeriod
