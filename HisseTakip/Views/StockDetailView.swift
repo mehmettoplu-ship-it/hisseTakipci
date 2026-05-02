@@ -5,6 +5,7 @@ struct StockDetailView: View {
     let stock: Stock
     @StateObject private var vm: StockDetailViewModel
     @ObservedObject private var favorites = FavoritesManager.shared
+    @Environment(\.dismiss) private var dismiss
 
     init(stock: Stock) {
         self.stock = stock
@@ -32,7 +33,21 @@ struct StockDetailView: View {
         }
         .navigationTitle(stock.symbol)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Geri")
+                            .font(.system(size: 16, weight: .regular))
+                    }
+                    .foregroundStyle(Color(red: 0.2, green: 0.5, blue: 1.0))
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     favorites.toggle(stock)
@@ -50,23 +65,27 @@ struct StockDetailView: View {
     // MARK: - Dış Bağlantı Butonları
 
     private var externalLinksRow: some View {
-        HStack(spacing: 10) {
-            externalLinkButton(
-                title: "TradingView",
-                subtitle: "BIST:\(stock.symbol) grafiği",
-                icon: "chart.xyaxis.line",
-                color: Color(red: 0.1, green: 0.47, blue: 0.95)
-            ) {
-                openTradingView()
+        VStack(spacing: 8) {
+            HStack(spacing: 10) {
+                externalLinkButton(
+                    title: "TradingView",
+                    subtitle: "BIST:\(stock.symbol)",
+                    icon: "chart.xyaxis.line",
+                    color: Color(red: 0.1, green: 0.47, blue: 0.95)
+                ) { openTradingView() }
+                externalLinkButton(
+                    title: "Finviz TR",
+                    subtitle: "fvt.com.tr",
+                    icon: "chart.bar.xaxis",
+                    color: Color(red: 0.1, green: 0.6, blue: 0.35)
+                ) { openFVT() }
             }
             externalLinkButton(
-                title: "Finviz Türkiye",
-                subtitle: "fvt.com.tr",
-                icon: "chart.bar.xaxis",
-                color: Color(red: 0.1, green: 0.6, blue: 0.35)
-            ) {
-                openFVT()
-            }
+                title: "Fintables",
+                subtitle: "fintables.com/sirketler/\(stock.symbol)",
+                icon: "building.2.fill",
+                color: Color(red: 0.55, green: 0.25, blue: 0.95)
+            ) { openFintables() }
         }
         .padding(.horizontal)
         .padding(.top, 4)
@@ -117,7 +136,7 @@ struct StockDetailView: View {
         .frame(maxWidth: .infinity)
     }
 
-    // MARK: - TradingView / FVT
+    // MARK: - Dış Bağlantılar
 
     private func openTradingView() {
         let encoded = "BIST%3A\(stock.symbol)"
@@ -127,6 +146,11 @@ struct StockDetailView: View {
 
     private func openFVT() {
         guard let url = URL(string: "https://fvt.com.tr/hisseler/yerli/\(stock.symbol)") else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func openFintables() {
+        guard let url = URL(string: "https://fintables.com/sirketler/\(stock.symbol)") else { return }
         UIApplication.shared.open(url)
     }
 
