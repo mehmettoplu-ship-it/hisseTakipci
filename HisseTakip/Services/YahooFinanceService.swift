@@ -13,6 +13,25 @@ actor YahooFinanceService {
     }()
 
     func fetchCandles(symbol: String, timeframe: Timeframe) async throws -> [Candle] {
+        var lastError: Error = FetchError.badResponse
+        for attempt in 0...2 {
+            if attempt > 0 {
+                // 429 rate-limit: 2s, 4s bekleme
+                try? await Task.sleep(for: .seconds(Double(attempt) * 2))
+            }
+            do {
+                return try await _fetchCandles(symbol: symbol, timeframe: timeframe)
+            } catch FetchError.rateLimited {
+                lastError = FetchError.rateLimited
+                // bir sonraki attempt'e geç
+            } catch {
+                throw error  // kalıcı hata (404, noData): hemen fırlat
+            }
+        }
+        throw lastError
+    }
+
+    private func _fetchCandles(symbol: String, timeframe: Timeframe) async throws -> [Candle] {
         let url = try buildURL(symbol: symbol, timeframe: timeframe)
         var urlRequest = URLRequest(url: url)
         urlRequest.setValue(
@@ -21,7 +40,12 @@ actor YahooFinanceService {
         )
         let (data, response) = try await session.data(for: urlRequest)
 
-        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+        guard let http = response as? HTTPURLResponse else { throw FetchError.badResponse }
+
+        if http.statusCode == 429 || http.statusCode == 401 {
+            throw FetchError.rateLimited
+        }
+        guard http.statusCode == 200 else {
             throw FetchError.badResponse
         }
 
@@ -98,13 +122,14 @@ actor YahooFinanceService {
 
 // MARK: - Errors
 enum FetchError: Error, LocalizedError {
-    case badURL, badResponse, noData
+    case badURL, badResponse, noData, rateLimited
 
     var errorDescription: String? {
         switch self {
-        case .badURL:      return "Geçersiz URL"
-        case .badResponse: return "Sunucu yanıt vermedi"
-        case .noData:      return "Veri bulunamadı"
+        case .badURL:       return "Geçersiz URL"
+        case .badResponse:  return "Sunucu yanıt vermedi"
+        case .noData:       return "Veri bulunamadı"
+        case .rateLimited:  return "İstek limiti aşıldı"
         }
     }
 }

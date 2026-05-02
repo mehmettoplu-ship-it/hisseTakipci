@@ -96,14 +96,17 @@ final class ScannerViewModel: ObservableObject {
         let total          = Double(pairs.count)
         var found: [Signal] = []
         var count          = 0
-        let chunkSize      = 8
+        let chunkSize      = 5
 
         let chunks = stride(from: 0, to: pairs.count, by: chunkSize).map {
             Array(pairs[$0 ..< min($0 + chunkSize, pairs.count)])
         }
 
-        for chunk in chunks {
+        for (chunkIdx, chunk) in chunks.enumerated() {
             if Task.isCancelled { break }
+            if chunkIdx > 0 {
+                try? await Task.sleep(for: .milliseconds(120))
+            }
             await withTaskGroup(of: [Signal].self) { group in
                 for (stock, timeframe) in chunk {
                     group.addTask {
@@ -156,7 +159,7 @@ final class ScannerViewModel: ObservableObject {
         let strategies = enabledStrategies
         let pairs      = stocks.flatMap { s in timeframes.map { tf in (s, tf) } }
         let total      = Double(pairs.count)
-        let chunkSize  = 8
+        let chunkSize  = 5   // Yahoo rate-limit'i azaltmak için küçük tutuldu
 
         let chunks = stride(from: 0, to: pairs.count, by: chunkSize).map {
             Array(pairs[$0 ..< min($0 + chunkSize, pairs.count)])
@@ -164,8 +167,12 @@ final class ScannerViewModel: ObservableObject {
 
         var newSignals: [Signal] = []
 
-        for chunk in chunks {
+        for (chunkIdx, chunk) in chunks.enumerated() {
             if Task.isCancelled { break }
+            // İlk chunk hariç kısa bekleme — Yahoo rate-limit'ini önler
+            if chunkIdx > 0 {
+                try? await Task.sleep(for: .milliseconds(120))
+            }
             currentSymbol = chunk.first?.0.symbol
             await withTaskGroup(of: ([Signal], Bool).self) { group in
                 for (stock, timeframe) in chunk {
