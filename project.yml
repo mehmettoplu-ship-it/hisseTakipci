@@ -21,8 +21,10 @@ targets:
           UIColorName: ""
         UIBackgroundModes:
           - fetch
+          - processing
         BGTaskSchedulerPermittedIdentifiers:
           - com.mehmet.hissetakip.scan
+          - com.mehmet.hissetakip.process
         NSUserNotificationUsageDescription: "Hisse sinyalleri için bildirim izni gerekiyor"
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
