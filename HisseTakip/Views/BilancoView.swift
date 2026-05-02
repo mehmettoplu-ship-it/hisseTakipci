@@ -44,19 +44,35 @@ struct BilancoView: View {
     // MARK: - İstatistik Çubuğu
 
     private var statsBar: some View {
-        HStack(spacing: 0) {
-            statBox(count: vm.signals.filter { $0.type == .turningProfitable }.count,
-                    label: "Kara\nGeçiş", color: Color(red: 0.1, green: 0.85, blue: 0.55))
-            Divider().frame(height: 40).opacity(0.5)
-            statBox(count: vm.signals.filter { $0.type == .lossReducing }.count,
-                    label: "Zarar\nAzalıyor", color: Color(red: 0.2, green: 0.6, blue: 1.0))
-            Divider().frame(height: 40).opacity(0.5)
-            statBox(count: vm.signals.filter { $0.type == .profitGrowing }.count,
-                    label: "Kar\nBüyüyor", color: Color(red: 1.0, green: 0.72, blue: 0.0))
-            Divider().frame(height: 40).opacity(0.5)
-            statBox(count: vm.signals.filter { $0.type == .revenueGrowing }.count,
-                    label: "Gelir\nArtışı", color: Color(red: 0.7, green: 0.3, blue: 1.0))
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                statBox(count: vm.signals.filter { $0.type == .turningProfitable }.count,
+                        label: "Kara\nGeçiş",     color: Color(red: 0.1,  green: 0.85, blue: 0.55))
+                statDivider()
+                statBox(count: vm.signals.filter { $0.type == .approachingProfit }.count,
+                        label: "Kâra\nYakın",     color: Color(red: 1.0,  green: 0.55, blue: 0.0))
+                statDivider()
+                statBox(count: vm.signals.filter { $0.type == .consecutiveLossReduction }.count,
+                        label: "Sürekli\nİyileşme", color: Color(red: 0.3, green: 0.7,  blue: 1.0))
+                statDivider()
+                statBox(count: vm.signals.filter { $0.type == .ebitTurnaround }.count,
+                        label: "FAVÖK\nToparlandı", color: Color(red: 0.6, green: 0.85, blue: 0.3))
+                statDivider()
+                statBox(count: vm.signals.filter { $0.type == .lossReducing }.count,
+                        label: "Zarar\nAzalıyor", color: Color(red: 0.2,  green: 0.6,  blue: 1.0))
+                statDivider()
+                statBox(count: vm.signals.filter { $0.type == .profitGrowing }.count,
+                        label: "Kar\nBüyüyor",    color: Color(red: 1.0,  green: 0.72, blue: 0.0))
+                statDivider()
+                statBox(count: vm.signals.filter { $0.type == .revenueGrowing }.count,
+                        label: "Gelir\nArtışı",   color: Color(red: 0.7,  green: 0.3,  blue: 1.0))
+            }
+            .padding(.horizontal, 8)
         }
+    }
+
+    private func statDivider() -> some View {
+        Divider().frame(height: 40).opacity(0.5)
     }
 
     private func statBox(count: Int, label: String, color: Color) -> some View {
@@ -69,7 +85,8 @@ struct BilancoView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity)
+        .frame(minWidth: 68)
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Taranıyor
@@ -156,7 +173,7 @@ struct BilancoView: View {
                 } else {
                     Text("Bilanço Taramasına Hazır")
                         .font(.title3.weight(.bold))
-                    Text("Kara geçen, zararını azaltan veya\ngeliri büyüyen şirketleri bulur")
+                    Text("Kara geçen, kâra yakın, FAVÖK toparlanmış\nveya sürekli iyileşen şirketleri bulur")
                         .font(.subheadline).foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
@@ -254,10 +271,13 @@ struct FinancialSignalCard: View {
 
     private var typeColor: Color {
         switch signal.type {
-        case .turningProfitable: return Color(red: 0.1, green: 0.85, blue: 0.55)
-        case .lossReducing:      return Color(red: 0.2, green: 0.6, blue: 1.0)
-        case .profitGrowing:     return Color(red: 1.0, green: 0.72, blue: 0.0)
-        case .revenueGrowing:    return Color(red: 0.7, green: 0.3, blue: 1.0)
+        case .turningProfitable:        return Color(red: 0.1,  green: 0.85, blue: 0.55)
+        case .approachingProfit:        return Color(red: 1.0,  green: 0.55, blue: 0.0)
+        case .consecutiveLossReduction: return Color(red: 0.3,  green: 0.7,  blue: 1.0)
+        case .ebitTurnaround:           return Color(red: 0.6,  green: 0.85, blue: 0.3)
+        case .lossReducing:             return Color(red: 0.2,  green: 0.6,  blue: 1.0)
+        case .profitGrowing:            return Color(red: 1.0,  green: 0.72, blue: 0.0)
+        case .revenueGrowing:           return Color(red: 0.7,  green: 0.3,  blue: 1.0)
         }
     }
 
@@ -319,6 +339,9 @@ struct FinancialSignalCard: View {
                     }
                     Spacer()
                 }
+
+                // Sinyal türüne özgü ek bilgi satırı
+                extraInfoRow
             }
             .padding(.vertical, 13)
             .padding(.horizontal, 13)
@@ -336,6 +359,66 @@ struct FinancialSignalCard: View {
                 )
         )
         .shadow(color: typeColor.opacity(0.12), radius: 8, y: 3)
+    }
+
+    @ViewBuilder
+    private var extraInfoRow: some View {
+        switch signal.type {
+
+        case .approachingProfit:
+            // Net marj yüzdesi + iyileşme okunun gösterimi
+            let marginPct = signal.currentNetMargin * 100
+            let improvPct = signal.netMarginImprovement * 100
+            HStack(spacing: 6) {
+                infoTag(
+                    text: String(format: "Net Marj: %.1f%%", marginPct),
+                    color: Color(red: 1.0, green: 0.55, blue: 0.0))
+                infoTag(
+                    text: String(format: "Marj %+.1f puan", improvPct),
+                    color: improvPct >= 0
+                        ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                        : Color(red: 1.0, green: 0.28, blue: 0.32))
+                Spacer()
+            }
+
+        case .consecutiveLossReduction:
+            // Kaç ardışık çeyrek iyileşme var
+            HStack(spacing: 6) {
+                infoTag(
+                    text: "\(signal.consecutiveImprovements + 1) çeyrek sürekli iyileşme",
+                    color: Color(red: 0.3, green: 0.7, blue: 1.0))
+                if signal.consecutiveImprovements >= 2 {
+                    infoTag(text: "Güçlü Trend", color: Color(red: 0.1, green: 0.85, blue: 0.55))
+                }
+                Spacer()
+            }
+
+        case .ebitTurnaround:
+            // FAVÖK (operasyonel kâr) değeri ve marjı
+            let ebitMargin = signal.currentRevenue != 0
+                ? signal.currentOperatingIncome / signal.currentRevenue * 100 : 0
+            HStack(spacing: 6) {
+                infoTag(
+                    text: "FAVÖK: \(formatMoney(signal.currentOperatingIncome))",
+                    color: Color(red: 0.6, green: 0.85, blue: 0.3))
+                infoTag(
+                    text: String(format: "FAVÖK Marjı: %.1f%%", ebitMargin),
+                    color: Color(red: 0.6, green: 0.85, blue: 0.3))
+                Spacer()
+            }
+
+        default:
+            EmptyView()
+        }
+    }
+
+    private func infoTag(text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 7).padding(.vertical, 3)
+            .background(color.opacity(0.12))
+            .clipShape(Capsule())
     }
 
     private func financialChip(label: String, value: String, valueColor: Color?) -> some View {

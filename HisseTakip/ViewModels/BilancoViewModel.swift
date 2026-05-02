@@ -100,12 +100,11 @@ final class BilancoViewModel: ObservableObject {
 
     private func analyze(stock: Stock, statements: [QuarterlyStatement]) -> [FinancialSignal] {
         guard statements.count >= 2 else { return [] }
-        let q0 = statements[0]   // son çeyrek
-        let q1 = statements[1]   // önceki çeyrek
-        // yıllık karşılaştırma (4 çeyrek önce)
+        let q0 = statements[0]
+        let q1 = statements[1]
+        let q2 = statements.count >= 3 ? statements[2] : nil
+        let q3 = statements.count >= 4 ? statements[3] : nil
         let q4 = statements.count >= 5 ? statements[4] : nil
-
-        var sigs: [FinancialSignal] = []
 
         let niChange = q1.netIncome != 0
             ? (q0.netIncome - q1.netIncome) / abs(q1.netIncome) * 100 : 0
@@ -114,37 +113,68 @@ final class BilancoViewModel: ObservableObject {
         let yoyNI: Double? = q4.map { q in
             q.netIncome != 0 ? (q0.netIncome - q.netIncome) / abs(q.netIncome) * 100 : 0
         }
+        let opChange = q1.operatingIncome != 0
+            ? (q0.operatingIncome - q1.operatingIncome) / abs(q1.operatingIncome) * 100 : 0
 
-        func makeSignal(_ type: FinancialSignalType) -> FinancialSignal {
+        // Ardışık iyileşme sayısı: net gelir her çeyrekte artıyor mu?
+        let allQ = [q0, q1, q2, q3].compactMap { $0 }
+        var consecutive = 0
+        for i in 0..<allQ.count - 1 {
+            if allQ[i].netIncome > allQ[i + 1].netIncome { consecutive += 1 }
+            else { break }
+        }
+
+        func sig(_ type: FinancialSignalType) -> FinancialSignal {
             FinancialSignal(
                 stock: stock, type: type,
                 currentNetIncome: q0.netIncome, previousNetIncome: q1.netIncome,
                 netIncomeChangePercent: niChange,
                 currentRevenue: q0.revenue, revenueChangePercent: revChange,
-                period: q0.periodLabel, yoyNetIncomeChangePercent: yoyNI)
+                period: q0.periodLabel, yoyNetIncomeChangePercent: yoyNI,
+                currentOperatingIncome: q0.operatingIncome,
+                operatingIncomeChangePercent: opChange,
+                consecutiveImprovements: consecutive,
+                currentNetMargin: q0.netMargin,
+                netMarginImprovement: q0.netMargin - q1.netMargin)
         }
 
-        // 1. Kara Geçiş: zarar → kar (en güçlü sinyal)
+        var sigs: [FinancialSignal] = []
+
+        // 1. Kara Geçiş — zarar → kâr (en güçlü sinyal, diğerleri atlanır)
         if q1.isLoss && q0.isProfit {
-            sigs.append(makeSignal(.turningProfitable))
+            return [sig(.turningProfitable)]
         }
 
-        // 2. Zarar Azalıyor: hâlâ zararla ama %15'ten fazla iyileşme
-        else if q1.isLoss && q0.isLoss && niChange > 15 {
-            sigs.append(makeSignal(.lossReducing))
+        // 2. Kâra Yakın — zararda ama net marj -5% ile 0% arası + iyileşiyor
+        //    Tipik durum: az zararlı + trend pozitif → bir sonraki dönem kâr olası
+        if q0.isLoss, q0.revenue > 0, q0.netMargin > -0.05, niChange > 0 {
+            sigs.append(sig(.approachingProfit))
         }
 
-        // 3. Kar Büyüyor: karda ve %20'den fazla büyüme
-        else if q1.isProfit && q0.isProfit && niChange > 20 {
-            sigs.append(makeSignal(.profitGrowing))
+        // 3. Sürekli İyileşme — 3+ ardışık çeyrek net gelir artışı (zarar azalıyor)
+        if consecutive >= 2, q0.isLoss, sigs.isEmpty {
+            sigs.append(sig(.consecutiveLossReduction))
         }
 
-        // 4. Gelir Artışı: gelir %20'den fazla arttı (kar/zarar bağımsız)
-        if revChange > 20, !sigs.contains(where: { $0.type == .revenueGrowing }) {
-            // Sadece tek başına gelir sinyali üret (kar sinyali yoksa)
-            if sigs.isEmpty {
-                sigs.append(makeSignal(.revenueGrowing))
-            }
+        // 4. FAVÖK Toparlandı — operasyonel kâr (EBIT) pozitif ama net zarar
+        //    Faiz gideri / kur farkı sürüklüyor; esas iş kârlı
+        if q0.operatingIncome > 0, q0.isLoss, q0.operatingMargin > 0.02, sigs.isEmpty {
+            sigs.append(sig(.ebitTurnaround))
+        }
+
+        // 5. Zarar Azalıyor — tek çeyreklik %15+ iyileşme (yukarıdaki sinyaller yoksa)
+        if q1.isLoss, q0.isLoss, niChange > 15, sigs.isEmpty {
+            sigs.append(sig(.lossReducing))
+        }
+
+        // 6. Kar Büyüyor — zaten kârdayken %20+ büyüme
+        if q1.isProfit, q0.isProfit, niChange > 20 {
+            sigs.append(sig(.profitGrowing))
+        }
+
+        // 7. Gelir Artışı — başka sinyal yoksa ve %20+ gelir artışı
+        if revChange > 20, sigs.isEmpty {
+            sigs.append(sig(.revenueGrowing))
         }
 
         return sigs
