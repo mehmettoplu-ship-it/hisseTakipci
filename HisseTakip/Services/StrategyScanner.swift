@@ -367,7 +367,7 @@ enum StrategyScanner {
         // Bir yıllık en yüksek seviyeyi hacim onaylı kıran hisseler
         // Kurumsal yatırımcıların izlediği Stage 2 kırılma kalıbı
         // ─────────────────────────────────────────────────────────────────
-        if enabledStrategies.contains(.weeklyBreakout), candles.count >= 250 {
+        if enabledStrategies.contains(.weeklyBreakout), candles.count >= 200 {
             let yearHigh = candles.suffix(251).dropLast().map(\.high).max() ?? 0
             if yearHigh > 0,
                price > yearHigh * 1.002,

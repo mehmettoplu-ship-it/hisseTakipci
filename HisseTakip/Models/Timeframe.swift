@@ -24,9 +24,9 @@ enum Timeframe: String, CaseIterable, Codable, Identifiable {
 
     var yahooRange: String {
         switch self {
-        case .oneHour:  return "7d"
-        case .fourHour: return "30d"
-        case .daily:    return "180d"
+        case .oneHour:  return "30d"   // ~120 BIST 1h candles (BIST ~8h/day × 15 days)
+        case .fourHour: return "90d"   // ~180 BIST 1h candles → 45 4h bars after aggregation
+        case .daily:    return "1y"    // ~250 trading days — required for weeklyBreakout
         }
     }
 

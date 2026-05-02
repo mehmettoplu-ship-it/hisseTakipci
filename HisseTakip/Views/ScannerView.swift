@@ -14,6 +14,8 @@ struct ScannerView: View {
                 Spacer()
                 if vm.isScanning {
                     scanningView
+                } else if !vm.signals.isEmpty {
+                    resultsView
                 } else {
                     idleView
                 }
@@ -27,9 +29,14 @@ struct ScannerView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if let date = vm.lastScanDate {
-                        Text(date.formatted(.dateTime.hour().minute()))
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
+                        HStack(spacing: 4) {
+                            Image(systemName: "clock")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                            Text(date.formatted(.dateTime.hour().minute()))
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
             }
@@ -87,10 +94,19 @@ struct ScannerView: View {
                     icon: "bolt.fill",
                     color: Color(red: 0.1, green: 0.85, blue: 0.55))
             Divider().frame(height: 40).opacity(0.5)
-            statBox(value: "\(vm.signals.filter { $0.type == .smartMomentum }.count)",
-                    label: "Akıllı Momentum",
-                    icon: "brain.fill",
-                    color: Color(red: 1.0, green: 0.72, blue: 0.0))
+            if vm.isScanning || vm.fetchErrors > 0 {
+                statBox(value: "\(vm.fetchErrors)",
+                        label: "Hata",
+                        icon: "exclamationmark.triangle.fill",
+                        color: vm.fetchErrors > 0
+                            ? Color(red: 1.0, green: 0.45, blue: 0.1)
+                            : .secondary)
+            } else {
+                statBox(value: "\(vm.signals.filter { $0.type == .smartMomentum }.count)",
+                        label: "Akıllı Momentum",
+                        icon: "brain.fill",
+                        color: Color(red: 1.0, green: 0.72, blue: 0.0))
+            }
         }
     }
 
@@ -114,7 +130,7 @@ struct ScannerView: View {
     // MARK: - Taranıyor
 
     private var scanningView: some View {
-        VStack(spacing: 24) {
+        VStack(spacing: 20) {
             ZStack {
                 Circle()
                     .stroke(Color(.systemGray5), lineWidth: 5)
@@ -141,13 +157,113 @@ struct ScannerView: View {
                 }
             }
 
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 Text("\(vm.scannedCount) / \(vm.stockList.count * vm.selectedTimeframes.count)")
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundStyle(.primary)
-                Text("hisse analiz ediliyor…")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+
+                if let sym = vm.currentSymbol {
+                    HStack(spacing: 6) {
+                        ProgressView()
+                            .scaleEffect(0.7)
+                        Text(sym)
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .transition(.opacity)
+                    }
+                    .animation(.easeInOut(duration: 0.2), value: sym)
+                } else {
+                    Text("hisse analiz ediliyor…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                if vm.fetchErrors > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.caption2)
+                        Text("\(vm.fetchErrors) hisse verisi alınamadı")
+                            .font(.caption)
+                    }
+                    .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.1))
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Color(red: 1.0, green: 0.45, blue: 0.1).opacity(0.1))
+                    .clipShape(Capsule())
+                }
+            }
+        }
+    }
+
+    // MARK: - Sonuçlar
+
+    private var resultsView: some View {
+        VStack(spacing: 18) {
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(
+                        colors: [Color(red: 0.1, green: 0.85, blue: 0.55).opacity(0.15), .clear],
+                        center: .center, startRadius: 0, endRadius: 55))
+                    .frame(width: 110, height: 110)
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundStyle(LinearGradient(
+                        colors: [Color(red: 0.1, green: 0.85, blue: 0.55), .mint],
+                        startPoint: .top, endPoint: .bottom))
+            }
+
+            VStack(spacing: 6) {
+                Text("\(vm.signals.count) sinyal bulundu")
+                    .font(.title3.weight(.bold))
+                HStack(spacing: 8) {
+                    if let dur = vm.scanDuration {
+                        Label(durationLabel(dur), systemImage: "timer")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                    if vm.fetchErrors > 0 {
+                        Label("\(vm.fetchErrors) hata", systemImage: "exclamationmark.triangle")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.1))
+                    }
+                }
+            }
+
+            strategyBreakdown
+
+            Text("Sinyaller sekmesinden inceleyin")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+    }
+
+    private var strategyBreakdown: some View {
+        let grouped = Dictionary(grouping: vm.signals, by: \.type)
+        let sorted  = grouped.sorted { $0.value.count > $1.value.count }.prefix(6)
+
+        return LazyVGrid(
+            columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())],
+            spacing: 8
+        ) {
+            ForEach(sorted, id: \.key) { type, sigs in
+                VStack(spacing: 4) {
+                    Text("\(sigs.count)")
+                        .font(.system(size: 18, weight: .black, design: .rounded))
+                        .foregroundStyle(.primary)
+                    Text(type.emoji)
+                        .font(.system(size: 14))
+                    Text(shortName(type))
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(2)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(.secondarySystemBackground))
+                )
             }
         }
     }
@@ -158,36 +274,22 @@ struct ScannerView: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .fill(
-                        RadialGradient(
-                            colors: [Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.2), .clear],
-                            center: .center, startRadius: 0, endRadius: 55
-                        )
-                    )
+                    .fill(RadialGradient(
+                        colors: [Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.15), .clear],
+                        center: .center, startRadius: 0, endRadius: 55))
                     .frame(width: 110, height: 110)
-                Image(systemName: vm.signals.isEmpty ? "chart.xyaxis.line" : "checkmark.seal.fill")
+                Image(systemName: "chart.xyaxis.line")
                     .font(.system(size: 44, weight: .medium))
-                    .foregroundStyle(
-                        vm.signals.isEmpty
-                            ? LinearGradient(colors: [Color(red: 0.2, green: 0.5, blue: 1.0), .cyan],
-                                             startPoint: .top, endPoint: .bottom)
-                            : LinearGradient(colors: [Color(red: 0.1, green: 0.85, blue: 0.55), .mint],
-                                             startPoint: .top, endPoint: .bottom)
-                    )
+                    .foregroundStyle(LinearGradient(
+                        colors: [Color(red: 0.2, green: 0.5, blue: 1.0), .cyan],
+                        startPoint: .top, endPoint: .bottom))
             }
 
             VStack(spacing: 6) {
-                if vm.signals.isEmpty {
-                    Text("Taramaya Hazır")
-                        .font(.title3.weight(.bold))
-                    Text("\(vm.stockList.count) hisse analiz edilecek")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                } else {
-                    Text("\(vm.signals.count) sinyal bulundu")
-                        .font(.title3.weight(.bold))
-                    Text("Sinyaller sekmesinden inceleyin")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
+                Text("Taramaya Hazır")
+                    .font(.title3.weight(.bold))
+                Text("\(vm.stockList.count) hisse, \(vm.selectedTimeframes.count) zaman dilimi")
+                    .font(.subheadline).foregroundStyle(.secondary)
             }
         }
     }
@@ -230,5 +332,31 @@ struct ScannerView: View {
         }
         .scaleEffect(vm.isScanning ? 0.98 : 1.0)
         .animation(.spring(response: 0.3), value: vm.isScanning)
+    }
+
+    // MARK: - Yardımcılar
+
+    private func durationLabel(_ seconds: TimeInterval) -> String {
+        let mins = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return mins > 0 ? "\(mins)dk \(secs)s" : "\(secs)s"
+    }
+
+    private func shortName(_ type: SignalType) -> String {
+        switch type {
+        case .resistanceBreakout: return "Direnç\nKırılması"
+        case .oversoldReversal:   return "RSI\nDip"
+        case .emaBullishCross:    return "EMA\nKesiş."
+        case .goldenCross:        return "Altın\nHaç"
+        case .bollingerBounce:    return "Bollinger\nZıplama"
+        case .squeezeBounce:      return "Sıkışma\nPatl."
+        case .rsiDivergence:      return "RSI\nDiverj."
+        case .maStack:            return "MA\nHizal."
+        case .breakoutRetest:     return "Geri\nTest"
+        case .trendPullback:      return "Trend\nDestek"
+        case .smartMomentum:      return "Akıllı\nMoment."
+        case .candlePattern:      return "Mum\nFormas."
+        case .weeklyBreakout:     return "52H\nZirve"
+        }
     }
 }

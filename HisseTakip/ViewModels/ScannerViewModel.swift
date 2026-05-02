@@ -11,6 +11,9 @@ final class ScannerViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var selectedTimeframes: Set<Timeframe> = Set(Timeframe.allCases)
     @Published var stockList: [Stock]    = BISTStockList.all
+    @Published var currentSymbol: String? = nil
+    @Published var fetchErrors: Int      = 0
+    @Published var scanDuration: TimeInterval? = nil
 
     private var scanTask: Task<Void, Never>?
     private var autoScanTask: Task<Void, Never>?
@@ -137,10 +140,13 @@ final class ScannerViewModel: ObservableObject {
     // MARK: - Ana Tarama
 
     private func performScan() async {
-        isScanning   = true
-        progress     = 0
-        scannedCount = 0
-        errorMessage = nil
+        isScanning     = true
+        progress       = 0
+        scannedCount   = 0
+        fetchErrors    = 0
+        errorMessage   = nil
+        currentSymbol  = nil
+        let scanStart  = Date()
 
         let previousSignals = signals
         let hadPreviousScan = lastScanDate != nil
@@ -160,26 +166,32 @@ final class ScannerViewModel: ObservableObject {
 
         for chunk in chunks {
             if Task.isCancelled { break }
-            await withTaskGroup(of: [Signal].self) { group in
+            currentSymbol = chunk.first?.0.symbol
+            await withTaskGroup(of: ([Signal], Bool).self) { group in
                 for (stock, timeframe) in chunk {
                     group.addTask {
-                        guard !Task.isCancelled else { return [] }
+                        guard !Task.isCancelled else { return ([], false) }
                         if let candles = try? await YahooFinanceService.shared
                             .fetchCandles(symbol: stock.id, timeframe: timeframe) {
-                            return StrategyScanner.scan(
+                            let sigs = StrategyScanner.scan(
                                 stock: stock, candles: candles,
                                 timeframe: timeframe, enabledStrategies: strategies)
+                            return (sigs, false)
                         }
-                        return []
+                        return ([], true)
                     }
                 }
-                for await partialSignals in group {
+                for await (partialSignals, hadError) in group {
                     newSignals.append(contentsOf: partialSignals)
+                    if hadError { fetchErrors += 1 }
                     scannedCount += 1
                     progress = Double(scannedCount) / total
                 }
             }
         }
+
+        currentSymbol = nil
+        scanDuration  = Date().timeIntervalSince(scanStart)
 
         if !Task.isCancelled {
             newSignals = applyRSIFilter(newSignals)
