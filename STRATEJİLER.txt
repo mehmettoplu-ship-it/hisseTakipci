@@ -1,7 +1,7 @@
 ================================================================
         HİSSE TAKİP — TARAMA STRATEJİLERİ KILAVUZU
 ================================================================
-Toplam Strateji: 11
+Toplam Strateji: 13
 Güncelleme: Mayıs 2026
 ================================================================
 
@@ -380,6 +380,90 @@ MANTIK:
 NE ZAMAN TETİKLENİR:
   Seyrek — en seçici strateji. Büyük hareketlerin başını
   yakalamak için tasarlanmıştır.
+
+
+----------------------------------------------------------------
+12. 🕯️ MUM FORMASYONU
+----------------------------------------------------------------
+NE YAPAR:
+  Destek bölgesinde oluşan iki klasik dönüş formasyonunu tespit
+  eder: Hammer (Çekiç) ve Bullish Engulfing (Boğa Yutma).
+  Bu formasyonlar fiyatın anlık güç dengesi hakkında saf bilgi
+  içerir — alıcılar mı yoksa satıcılar mı galip geldi?
+
+FORMASYON 1 — HAMMER (ÇEKİÇ):
+  - Alt gölge, toplam mum aralığının %55'inden uzun
+    (satıcılar aşağı itti, alıcılar geri aldı)
+  - Mum gövdesi, aralığın %30'undan küçük (karar anı)
+  - Üst gölge, aralığın %20'sinden kısa (fiyat yukarı çıkmadı)
+  - RSI 52'nin altında (aşırı alım yok)
+
+FORMASYON 2 — BULLISH ENGULFING (BOĞA YUTMA):
+  - Önceki mum kırmızı (satıcılar galip)
+  - Son mum yeşil ve önceki kırmızı mumun gövdesini tamamen yutmalı
+    (current open ≤ prev close VE current close ≥ prev open)
+  - Yeşil mumun gövdesi kırmızıdan en az %10 büyük
+  - RSI 58'in altında
+
+HER İKİ FORMASYON İÇİN:
+  - Confluence skoru en az 2/5
+  - Fiyat EMA21 veya EMA50'nin %3 yakınında VEYA
+    Bollinger alt bandının %3 yakınında (destek bölgesi)
+
+GÜÇLÜ SİNYAL:
+  Bullish Engulfing: Mum gövdesi öncekinin 2x+ büyüklüğünde
+  VE hacim 1.5x+ → Güçlü
+  Hammer: Alt gölge > aralığın %70'i VE EMA50 çok yakınında → Güçlü
+
+MANTIK:
+  Mum formasyonları diğer göstergelerden farklı çalışır —
+  hesaplama yoktur, doğrudan fiyat hareketinin hikayesidir.
+  Hammer'da uzun alt gölge "satıcılar sert baskı yaptı ama
+  alıcılar geri aldı" demektir. Bullish Engulfing'de büyük
+  yeşil mumun kırmızıyı tamamen yutması anlık güç değişimini
+  gösterir. İkisi de destek bölgesinde gerçekleştiğinde,
+  hem teknik destek hem psikolojik dönüş bir arada demektir.
+
+NE ZAMAN TETİKLENİR:
+  Orta sıklıkta.
+
+
+----------------------------------------------------------------
+13. 📈 52 HAFTA ZİRVESİ KIRILMASI
+----------------------------------------------------------------
+NE YAPAR:
+  Bir hissenin son 52 haftanın (1 yılın) en yüksek kapanış
+  seviyesini güçlü hacimle yukarı kırdığını tespit eder.
+  Teknik analizin en çok tartışılan ve en güçlü momentum
+  sinyallerinden biri. Mark Minervini ve IBD'nin "Stage 2
+  Breakout" stratejisinin temelidir.
+
+KOŞULLAR:
+  - Son 250 mumun en yüksek seviyesinin %0.2+ üzerinde kapanış
+  - Hacim, 20 günlük ortalama hacmin 1.5 katından fazla
+  - RSI 55 ile 78 arasında (güçlü momentum, aşırı alım değil)
+  - Fiyat EMA21 ve EMA50'nin üzerinde (ana trend destekliyor)
+  - Min. 250 mum verisi gerekli (günlük periyotta 1 yıl)
+
+GÜÇLÜ SİNYAL:
+  Hacim 2x+ VE RSI 60+ → Güçlü
+  Hacim 1.5–2x VE RSI 55–60 → Orta
+
+MANTIK:
+  52 haftalık zirve yalnızca teknik bir seviye değildir —
+  psikolojik bir engeldir. Bir yıldır bu seviyenin üzerine
+  çıkamayan ve orada tutan pek çok satıcı bulunur. Fiyat bu
+  engeli büyük hacimle geçiyorsa, kurumsal alıcılar (fonlar,
+  yabancı yatırımcılar) devreye girmiş demektir. Tarihin en
+  büyük hisse rallilerinin büyük çoğunluğu bu kalıpla başlar:
+  yeni zirve → çekilme → yeni zirve serisi. RSI'nın 55–78
+  arasında olması şartı hem momentumun güçlü hem de henüz
+  aşırı alınmamış olduğunu garantiler.
+
+NE ZAMAN TETİKLENİR:
+  Seyrek — yalnızca gerçek kırılma anlarında.
+  Günlük periyotta 250 mum verisi gerektiği için diğer
+  periyotlarda tetiklenmez.
 
 
 ================================================================

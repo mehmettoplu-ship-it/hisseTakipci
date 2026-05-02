@@ -310,6 +310,80 @@ enum StrategyScanner {
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // 12. MUM FORMASYONU
+        // Hammer (Çekiç) veya Bullish Engulfing — destek bölgesinde oluşmalı
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.candlePattern) {
+            let range = lastCandle.high - lastCandle.low
+
+            if range > 0 {
+                let lowerShadow = min(lastCandle.open, lastCandle.close) - lastCandle.low
+                let upperShadow = lastCandle.high - max(lastCandle.open, lastCandle.close)
+                let bodyRatio   = abs(lastCandle.close - lastCandle.open) / range
+                let body        = abs(lastCandle.close - lastCandle.open)
+
+                // Hammer: uzun alt gölge, küçük gövde, küçük üst gölge
+                let isHammer = lowerShadow / range > 0.55 &&
+                               bodyRatio < 0.30 &&
+                               upperShadow / range < 0.20 &&
+                               ind.rsi < 52
+
+                // Bullish Engulfing: önceki kırmızı mumu tamamen yutan yeşil mum
+                let prevBody     = abs(prevCandle.close - prevCandle.open)
+                let prevBearish  = prevCandle.close < prevCandle.open
+                let currBullish  = lastCandle.close > lastCandle.open
+                let engulfs      = lastCandle.open  <= prevCandle.close &&
+                                   lastCandle.close >= prevCandle.open
+                let isEngulfing  = prevBearish && currBullish && engulfs &&
+                                   body > prevBody * 1.1 &&
+                                   ind.rsi < 58
+
+                if (isHammer || isEngulfing) && confluence >= 2 {
+                    let nearEMA = price >= ind.ema21 * 0.97 || price >= ind.ema50 * 0.97
+                    let nearBB  = lastCandle.low <= ind.bbLower * 1.03
+
+                    if nearEMA || nearBB {
+                        let isStrong: Bool
+                        if isEngulfing {
+                            isStrong = body > prevBody * 2.0 && volRatio >= 1.5
+                        } else {
+                            isStrong = lowerShadow / range > 0.70 &&
+                                       (nearBB || abs(price - ind.ema50) / ind.ema50 < 0.015)
+                        }
+                        signals.append(make(
+                            stock: stock, type: .candlePattern,
+                            strength: isStrong ? .strong : .moderate,
+                            timeframe: timeframe, price: price, ind: ind,
+                            volRatio: volRatio, dailyChange: dailyChange
+                        ))
+                    }
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // 13. 52 HAFTA ZİRVESİ KIRILMASI
+        // Bir yıllık en yüksek seviyeyi hacim onaylı kıran hisseler
+        // Kurumsal yatırımcıların izlediği Stage 2 kırılma kalıbı
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.weeklyBreakout), candles.count >= 250 {
+            let yearHigh = candles.suffix(251).dropLast().map(\.high).max() ?? 0
+            if yearHigh > 0,
+               price > yearHigh * 1.002,
+               lastCandle.volume > ind.avgVolume20 * 1.5,
+               ind.rsi > 55, ind.rsi < 78,
+               price > ind.ema21,
+               price > ind.ema50 {
+                signals.append(make(
+                    stock: stock, type: .weeklyBreakout,
+                    strength: volRatio >= 2.0 && ind.rsi > 60 ? .strong : .moderate,
+                    timeframe: timeframe, price: price, ind: ind,
+                    volRatio: volRatio, dailyChange: dailyChange
+                ))
+            }
+        }
+
         return signals
     }
 

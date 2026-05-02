@@ -12,6 +12,8 @@ enum SignalType: String, Codable, CaseIterable {
     case breakoutRetest     = "Kırılma Geri Testi"
     case trendPullback      = "Trend Desteği"
     case smartMomentum      = "Akıllı Momentum"
+    case candlePattern      = "Mum Formasyonu"
+    case weeklyBreakout     = "52 Hafta Zirvesi"
 
     var emoji: String {
         switch self {
@@ -26,6 +28,8 @@ enum SignalType: String, Codable, CaseIterable {
         case .breakoutRetest:     return "🎯"
         case .trendPullback:      return "↩️"
         case .smartMomentum:      return "🧠"
+        case .candlePattern:      return "🕯️"
+        case .weeklyBreakout:     return "📈"
         }
     }
 
@@ -42,6 +46,8 @@ enum SignalType: String, Codable, CaseIterable {
         case .breakoutRetest:     return "strategy_breakoutRetest"
         case .trendPullback:      return "strategy_trendPullback"
         case .smartMomentum:      return "strategy_smartMomentum"
+        case .candlePattern:      return "strategy_candlePattern"
+        case .weeklyBreakout:     return "strategy_weeklyBreakout"
         }
     }
 }
@@ -63,6 +69,8 @@ extension SignalType {
         case .breakoutRetest:     return "Kırılan direnç seviyesini destek olarak test eden ve dönen hisseleri tespit eder."
         case .trendPullback:      return "Yükselen trendde EMA21 veya EMA50 desteğine çekilen ve dönen hisseleri tespit eder."
         case .smartMomentum:      return "5 bağımsız sistemin hepsinin aynı anda boğa sinyali verdiği anları yakalar. En seçici strateji."
+        case .candlePattern:      return "Destek bölgesinde oluşan Hammer (Çekiç) veya Bullish Engulfing (Boğa Yutma) formasyonunu tespit eder."
+        case .weeklyBreakout:     return "52 haftalık (1 yıllık) en yüksek seviyeyi hacim onayıyla kıran hisseleri tespit eder. Kurumsal yatırımcıların en çok izlediği direnç seviyesi."
         }
     }
 
@@ -127,6 +135,18 @@ extension SignalType {
                     "MACD çizgisi > 0 VE histogram > 0 (sıfır üstünde ivme)",
                     "Hacim 1.2x+ (para girişi var)",
                     "⚠️ 5 koşulun TAMAMI sağlanmalı, 4 yetmez"]
+        case .candlePattern:
+            return ["Hammer: Alt gölge > toplam aralığın %55'i, gövde < %30, üst gölge < %20",
+                    "Bullish Engulfing: Önceki kırmızı mumu tamamen yutan yeşil mum",
+                    "Her iki formasyon için RSI < 52 (aşırı alım yok)",
+                    "Fiyat EMA21/EMA50 desteği yakınında VEYA Bollinger alt bandı yakınında",
+                    "Confluence skoru ≥ 2/5"]
+        case .weeklyBreakout:
+            return ["Son 250 mumun (1 yıl) en yüksek seviyesinin %0.2+ üzerinde kapanış",
+                    "Hacim 20 günlük ortalamanın 1.5 katından fazla",
+                    "RSI 55–78 arasında (güçlü momentum, aşırı alım yok)",
+                    "Fiyat EMA21 ve EMA50 üzerinde (ana trend yukarı)",
+                    "En az 250 mum veri gerekli"]
         }
     }
 
@@ -154,6 +174,10 @@ extension SignalType {
             return "Trend devam ederken her EMA desteğine çekilme potansiyel giriş noktasıdır. EMA50'ye çekilme daha derin olduğundan daha güçlü bir fırsat sayılır. Boğa mumu şartı desteğin tuttuğunu ve alıcıların devreye girdiğini teyit eder."
         case .smartMomentum:
             return "SuperTrend, EMA dizilimi, RSI, MACD ve hacim — 5 bağımsız sistem, farklı matematiksel yaklaşımlar. Hepsinin aynı anda 'al' demesi rastlantı değildir. Sinyal üretimi çok seyrektir ama kalitesi çok yüksektir."
+        case .candlePattern:
+            return "Mum formasyonları fiyatın anlık hikayesini anlatır: alıcılar mı satıcılar mı galip geldi? Hammer'da uzun alt gölge 'satıcılar baskı yaptı ama alıcılar geri aldı' demektir. Bullish Engulfing'de büyük yeşil mumun kırmızıyı tamamen yutması ani güç değişimini gösterir. İkisi de destek bölgesinde gerçekleşirse anlam kazanır."
+        case .weeklyBreakout:
+            return "52 haftalık zirve yalnızca teknik bir seviye değil, psikolojik bir engel. Bir yıldır bu seviyenin üzerine çıkamayan hisse aniden büyük hacimle geçiyorsa kurumsal alıcılar devreye girmiş demektir. Mark Minervini ve IBD (Investor's Business Daily) bu formasyonu 'Stage 2 Breakout' olarak tanımlar ve tarihin en büyük rallilerinin büyük çoğunluğu bu kalıpla başlamıştır."
         }
     }
 
@@ -170,6 +194,8 @@ extension SignalType {
         case .breakoutRetest:     return "Orijinal kırılmada yüksek hacim (1.8x+) VE fiyat EMA50 üzerindeyse Güçlü."
         case .trendPullback:      return "EMA50'ye dokunuş VE Hacim 1.3x+ VE RSI 42+ → Güçlü. EMA21'e dokunuş → Orta."
         case .smartMomentum:      return "SuperTrend yeni döndü veya EMA9 hızlanıyor VE Hacim 1.5x+ → Güçlü."
+        case .candlePattern:      return "Bullish Engulfing ve mum gövdesi önceki mumun 2x+ büyüklüğünde VE Hacim 1.5x+ → Güçlü. Hammer ve alt gölge > 3x gövde VE EMA50 yakınında → Güçlü."
+        case .weeklyBreakout:     return "Hacim 2x+ VE RSI 60+ → Güçlü. 1.5–2x hacim ve RSI 55–60 → Orta."
         }
     }
 
@@ -186,6 +212,8 @@ extension SignalType {
         case .breakoutRetest:     return "Seyrek"
         case .trendPullback:      return "Orta Sıklıkta"
         case .smartMomentum:      return "Seyrek"
+        case .candlePattern:      return "Orta Sıklıkta"
+        case .weeklyBreakout:     return "Seyrek"
         }
     }
 }
