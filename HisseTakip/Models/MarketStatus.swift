@@ -37,12 +37,13 @@ enum MarketCondition {
 struct MarketStatus {
     let price: Double
     let changePercent: Double
+    let dayHigh: Double
+    let dayLow: Double
     let condition: MarketCondition
     let isAboveEMA50: Bool
-    let isBelowSupport: Bool  // son 20 günün en düşüğünün altında mı
+    let isBelowSupport: Bool
     let updatedAt: Date
 
-    // Mynet Finance tek-değer quote'tan hızlı oluşturur (EMA/support bilgisi olmadan)
     static func makeFromQuote(price: Double, changePercent: Double) -> MarketStatus {
         let condition: MarketCondition
         if changePercent >= 2.0       { condition = .strongBull }
@@ -52,12 +53,10 @@ struct MarketStatus {
         else                          { condition = .strongBear }
 
         return MarketStatus(
-            price: price,
-            changePercent: changePercent,
-            condition: condition,
-            isAboveEMA50: true,
-            isBelowSupport: false,
-            updatedAt: Date()
+            price: price, changePercent: changePercent,
+            dayHigh: price, dayLow: price,
+            condition: condition, isAboveEMA50: true,
+            isBelowSupport: false, updatedAt: Date()
         )
     }
 
@@ -78,25 +77,17 @@ struct MarketStatus {
         let isBelowSupport = last.close < support20
 
         let condition: MarketCondition
-        if changePercent >= 2.0 {
-            condition = .strongBull
-        } else if changePercent > 0.0 {
-            condition = .bull
-        } else if changePercent >= -0.5 {
-            condition = .neutral
-        } else if changePercent >= -2.0 {
-            condition = .bear
-        } else {
-            condition = .strongBear
-        }
+        if changePercent >= 2.0       { condition = .strongBull }
+        else if changePercent > 0.0   { condition = .bull }
+        else if changePercent >= -0.5 { condition = .neutral }
+        else if changePercent >= -2.0 { condition = .bear }
+        else                          { condition = .strongBear }
 
         return MarketStatus(
-            price: last.close,
-            changePercent: changePercent,
-            condition: condition,
-            isAboveEMA50: isAboveEMA50,
-            isBelowSupport: isBelowSupport,
-            updatedAt: Date()
+            price: last.close, changePercent: changePercent,
+            dayHigh: last.high, dayLow: last.low,
+            condition: condition, isAboveEMA50: isAboveEMA50,
+            isBelowSupport: isBelowSupport, updatedAt: Date()
         )
     }
 }
