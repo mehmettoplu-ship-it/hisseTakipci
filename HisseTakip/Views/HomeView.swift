@@ -323,11 +323,12 @@ struct HomeView: View {
 
     @ViewBuilder
     private var recentSignalsSection: some View {
-        let top = Array(scanner.sortedSignals.prefix(4))
+        let top = Array(scanner.sortedSignals.prefix(5))
+        let stockCounts = Dictionary(grouping: scanner.signals, by: \.stock.id).mapValues(\.count)
         if !top.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Label("Son Güçlü Sinyaller", systemImage: "bolt.fill")
+                    Label("Son Sinyaller", systemImage: "bolt.fill")
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
                     Spacer()
@@ -343,8 +344,10 @@ struct HomeView: View {
                 .padding(.horizontal, 4)
 
                 ForEach(top) { signal in
-                    Button { selectedTab = 3 } label: {
-                        signalRow(signal)
+                    NavigationLink {
+                        StockDetailView(stock: signal.stock)
+                    } label: {
+                        signalRow(signal, multiCount: stockCounts[signal.stock.id] ?? 1)
                     }
                     .buttonStyle(.plain)
                 }
@@ -352,7 +355,7 @@ struct HomeView: View {
         }
     }
 
-    private func signalRow(_ signal: Signal) -> some View {
+    private func signalRow(_ signal: Signal, multiCount: Int) -> some View {
         let strengthColor: Color = signal.strength == .strong
             ? Color(red: 0.1, green: 0.85, blue: 0.55)
             : signal.strength == .moderate ? .orange : .gray
@@ -366,6 +369,14 @@ struct HomeView: View {
                 HStack(spacing: 6) {
                     Text(signal.stock.symbol)
                         .font(.system(size: 14, weight: .black))
+                    if multiCount >= 2 {
+                        Text("\(multiCount) sinyal")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(strengthColor)
+                            .clipShape(Capsule())
+                    }
                     Text(signal.type.emoji + " " + signal.type.rawValue)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.secondary)
@@ -444,8 +455,23 @@ struct HomeView: View {
             ProgressView(value: scanner.progress)
                 .tint(.blue)
                 .scaleEffect(x: 1, y: 1.4)
-            Text("\(scanner.scannedCount) / \(scanner.stockList.count * scanner.selectedTimeframes.count) hisse tarandı")
-                .font(.caption).foregroundStyle(.secondary)
+            HStack(spacing: 6) {
+                Text("\(scanner.scannedCount) / \(scanner.stockList.count * scanner.selectedTimeframes.count) hisse")
+                    .font(.caption).foregroundStyle(.secondary)
+                if let sym = scanner.currentSymbol {
+                    Text("·")
+                        .font(.caption).foregroundStyle(.tertiary)
+                    Text(sym)
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                }
+                if scanner.fetchErrors > 0 {
+                    Spacer()
+                    Text("\(scanner.fetchErrors) hata")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.1))
+                }
+            }
         }
     }
 

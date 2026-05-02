@@ -5,6 +5,10 @@ struct ContentView: View {
     @AppStorage("scanOnLaunch") private var scanOnLaunch = true
     @State var selectedTab = 0
 
+    private var multiSignalStockCount: Int {
+        Dictionary(grouping: scanner.signals, by: \.stock).filter { $0.value.count >= 2 }.count
+    }
+
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeView(selectedTab: $selectedTab)
@@ -22,6 +26,7 @@ struct ContentView: View {
 
             SignalListView()
                 .tabItem { Label("Sinyaller", systemImage: "chart.line.uptrend.xyaxis") }
+                .badge(multiSignalStockCount > 0 ? multiSignalStockCount : 0)
                 .tag(3)
 
             BilancoView()
