@@ -87,6 +87,7 @@ struct SettingsView: View {
 private struct StrategyToggleRow: View {
     let type: SignalType
     @AppStorage private var isEnabled: Bool
+    @State private var showDetail = false
 
     init(type: SignalType) {
         self.type = type
@@ -94,8 +95,132 @@ private struct StrategyToggleRow: View {
     }
 
     var body: some View {
-        Toggle(isOn: $isEnabled) {
-            Text(type.emoji + " " + type.rawValue)
+        HStack {
+            Toggle(isOn: $isEnabled) {
+                Text(type.emoji + " " + type.rawValue)
+            }
+            Button {
+                showDetail = true
+            } label: {
+                Image(systemName: "info.circle")
+                    .foregroundStyle(.secondary)
+                    .font(.system(size: 17))
+            }
+            .buttonStyle(.plain)
         }
+        .sheet(isPresented: $showDetail) {
+            StrategyDetailView(type: type)
+        }
+    }
+}
+
+private struct StrategyDetailView: View {
+    let type: SignalType
+    @Environment(\.dismiss) private var dismiss
+
+    private var frequencyColor: Color {
+        type.firingFrequency == "Seyrek"
+            ? Color(red: 0.1, green: 0.85, blue: 0.55)
+            : Color(red: 1.0, green: 0.62, blue: 0.0)
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+
+                    // Başlık kartı
+                    VStack(spacing: 10) {
+                        Text(type.emoji)
+                            .font(.system(size: 52))
+                        Text(type.rawValue)
+                            .font(.title2.weight(.black))
+                        Text(type.shortDescription)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 12)
+                        Label(type.firingFrequency, systemImage: "timer")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(frequencyColor)
+                            .padding(.horizontal, 12).padding(.vertical, 5)
+                            .background(frequencyColor.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+
+                    Divider()
+
+                    // Koşullar
+                    infoSection(title: "Tetiklenme Koşulları", icon: "checklist") {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(Array(type.conditionsList.enumerated()), id: \.offset) { _, cond in
+                                HStack(alignment: .top, spacing: 10) {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(Color(red: 0.2, green: 0.5, blue: 1.0))
+                                        .padding(.top, 2)
+                                    Text(cond)
+                                        .font(.subheadline)
+                                }
+                            }
+                        }
+                    }
+
+                    // Mantık
+                    infoSection(title: "Strateji Mantığı", icon: "brain.fill") {
+                        Text(type.strategyLogic)
+                            .font(.subheadline)
+                            .lineSpacing(4)
+                    }
+
+                    // Güçlü sinyal kriterleri
+                    infoSection(title: "Güçlü Sinyal Kriteri", icon: "bolt.fill") {
+                        Text(type.strongSignalCriteria)
+                            .font(.subheadline)
+                            .lineSpacing(4)
+                    }
+
+                    Text("Bu bilgiler yatırım tavsiyesi değildir.")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(.bottom, 8)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Kapat") { dismiss() }
+                        .font(.system(size: 15, weight: .semibold))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    @ViewBuilder
+    private func infoSection<Content: View>(
+        title: String,
+        icon: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: icon)
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+            content()
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.secondarySystemBackground))
+        )
     }
 }
