@@ -7,11 +7,13 @@ struct HisseTakipApp: App {
     @Environment(\.scenePhase) private var scenePhase
     private let scanner = ScannerViewModel()
 
+    // Info.plist → BGTaskSchedulerPermittedIdentifiers dizisine her ikisi de eklenmiş olmalı
+    private let refreshID = "com.mehmet.hissetakip.scan"    // BGAppRefreshTask  (~30s, hafif)
+    private let processID = "com.mehmet.hissetakip.process" // BGProcessingTask  (uzun, tam tarama)
+
     init() {
-        // Ön planda bildirim göstermek için delegate'i hemen set et
         UNUserNotificationCenter.current().delegate = NotificationManager.shared
-        registerBackgroundTask()
-        scheduleNextBackgroundTask()
+        registerBackgroundTasks()
     }
 
     var body: some Scene {
@@ -23,29 +25,45 @@ struct HisseTakipApp: App {
             switch newPhase {
             case .active:
                 scanner.startAutoScan()
-                scheduleNextBackgroundTask()
             case .background:
                 scanner.stopAutoScan()
-                scheduleNextBackgroundTask()
+                scheduleRefreshTask()
+                scheduleProcessTask()
             default:
                 break
             }
         }
-    }
-
-    // MARK: - BGAppRefreshTask
-
-    private func registerBackgroundTask() {
-        BGTaskScheduler.shared.register(
-            forTaskWithIdentifier: "com.mehmet.hissetakip.scan",
-            using: nil
-        ) { task in
-            self.handleBackgroundScan(task: task as! BGAppRefreshTask)
+        .task {
+            await NotificationManager.shared.requestPermission()
         }
     }
 
-    private func handleBackgroundScan(task: BGAppRefreshTask) {
-        scheduleNextBackgroundTask()
+    // MARK: - Kayıt
+
+    private func registerBackgroundTasks() {
+        // Hafif tetikleyici — yalnızca process task'ı yeniden planlar, hızla döner
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: refreshID, using: nil) { task in
+            self.handleRefreshTask(task: task as! BGAppRefreshTask)
+        }
+        // Tam tarama — wifi'de, daha uzun bütçeyle çalışır
+        BGTaskScheduler.shared.register(forTaskWithIdentifier: processID, using: nil) { task in
+            self.handleProcessTask(task: task as! BGProcessingTask)
+        }
+    }
+
+    // MARK: - BGAppRefreshTask (~30 saniye bütçe)
+    // Sadece bir sonraki task'ı planlar ve biter — asla ağır iş yapma
+
+    private func handleRefreshTask(task: BGAppRefreshTask) {
+        scheduleRefreshTask()
+        scheduleProcessTask()
+        task.setTaskCompleted(success: true)
+    }
+
+    // MARK: - BGProcessingTask (wifi olduğunda, dakikalarca çalışabilir)
+
+    private func handleProcessTask(task: BGProcessingTask) {
+        scheduleProcessTask() // Bir sonrakini hemen planla
 
         let scanTask = Task {
             await scanner.startScanForBackground()
@@ -53,6 +71,7 @@ struct HisseTakipApp: App {
 
         task.expirationHandler = {
             scanTask.cancel()
+            task.setTaskCompleted(success: false)
         }
 
         Task {
@@ -61,13 +80,20 @@ struct HisseTakipApp: App {
         }
     }
 
-    private func scheduleNextBackgroundTask() {
-        let minutes = {
-            let v = UserDefaults.standard.integer(forKey: "autoScanIntervalMinutes")
-            return v > 0 ? v : 15
-        }()
-        let request = BGAppRefreshTaskRequest(identifier: "com.mehmet.hissetakip.scan")
-        request.earliestBeginDate = Date(timeIntervalSinceNow: Double(minutes) * 60)
-        try? BGTaskScheduler.shared.submit(request)
+    // MARK: - Zamanlama
+
+    private func scheduleRefreshTask() {
+        let req = BGAppRefreshTaskRequest(identifier: refreshID)
+        req.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+        try? BGTaskScheduler.shared.submit(req)
+    }
+
+    private func scheduleProcessTask() {
+        let minutes = max(UserDefaults.standard.integer(forKey: "autoScanIntervalMinutes"), 15)
+        let req = BGProcessingTaskRequest(identifier: processID)
+        req.earliestBeginDate    = Date(timeIntervalSinceNow: Double(minutes) * 60)
+        req.requiresNetworkConnectivity = true
+        req.requiresExternalPower       = false // Pille de çalışsın
+        try? BGTaskScheduler.shared.submit(req)
     }
 }
