@@ -34,6 +34,13 @@ struct BilancoView: View {
             .navigationTitle("Bilanço Tarayıcı")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                if let date = vm.lastScanDate {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Text(date.formatted(.dateTime.day().month().hour().minute()))
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
                 if !vm.signals.isEmpty {
                     ToolbarItem(placement: .topBarTrailing) { filterMenu }
                 }
@@ -129,6 +136,15 @@ struct BilancoView: View {
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                 Text("bilanço analiz ediliyor…")
                     .font(.subheadline).foregroundStyle(.secondary)
+                HStack(spacing: 16) {
+                    Label("\(vm.dataFoundCount) veri bulundu", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(Color(red: 0.1, green: 0.85, blue: 0.55))
+                    if vm.fetchErrors > 0 {
+                        Label("\(vm.fetchErrors) hata", systemImage: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                    }
+                }
+                .font(.caption.weight(.medium))
                 Text("Kaynak: Yahoo Finance")
                     .font(.caption2).foregroundStyle(.tertiary)
             }
@@ -196,17 +212,54 @@ struct BilancoView: View {
     // MARK: - Sinyal Listesi
 
     private var signalList: some View {
-        List(filtered) { sig in
-            NavigationLink {
-                StockDetailView(stock: sig.stock)
-            } label: {
-                FinancialSignalCard(signal: sig)
+        List {
+            if filterType == nil {
+                scanSummaryRow
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(.init(top: 4, leading: 14, bottom: 2, trailing: 14))
             }
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-            .listRowInsets(.init(top: 6, leading: 14, bottom: 6, trailing: 14))
+            ForEach(filtered) { sig in
+                NavigationLink {
+                    StockDetailView(stock: sig.stock)
+                } label: {
+                    FinancialSignalCard(signal: sig)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(.init(top: 6, leading: 14, bottom: 6, trailing: 14))
+            }
         }
         .listStyle(.plain)
+    }
+
+    private var scanSummaryRow: some View {
+        HStack(spacing: 12) {
+            summaryChip(value: "\(vm.totalCount)", label: "Tarandı", color: .secondary)
+            summaryChip(value: "\(vm.dataFoundCount)", label: "Veri Bulundu",
+                        color: Color(red: 0.1, green: 0.85, blue: 0.55))
+            summaryChip(value: "\(vm.signals.count)", label: "Sinyal",
+                        color: Color(red: 0.2, green: 0.5, blue: 1.0))
+            if vm.fetchErrors > 0 {
+                summaryChip(value: "\(vm.fetchErrors)", label: "Hata", color: .orange)
+            }
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func summaryChip(value: String, label: String, color: Color) -> some View {
+        HStack(spacing: 4) {
+            Text(value)
+                .font(.system(size: 13, weight: .black, design: .rounded))
+                .foregroundStyle(color)
+            Text(label)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 9).padding(.vertical, 5)
+        .background(color.opacity(0.08))
+        .clipShape(Capsule())
     }
 
     // MARK: - Tara Butonu

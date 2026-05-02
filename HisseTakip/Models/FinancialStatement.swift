@@ -20,7 +20,7 @@ struct QuarterlyStatement {
     }
 }
 
-enum FinancialSignalType: String, CaseIterable {
+enum FinancialSignalType: String, CaseIterable, Codable {
     case turningProfitable        = "Kara Geçiş"
     case approachingProfit        = "Kâra Yakın"
     case consecutiveLossReduction = "Sürekli İyileşme"
@@ -60,7 +60,7 @@ enum FinancialSignalType: String, CaseIterable {
     }
 }
 
-struct FinancialSignal: Identifiable {
+struct FinancialSignal: Identifiable, Codable {
     let id = UUID()
     let stock: Stock
     let type: FinancialSignalType

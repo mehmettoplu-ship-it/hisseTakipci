@@ -11,8 +11,18 @@ final class BilancoViewModel: ObservableObject {
     @Published var fetchErrors   = 0
     @Published var hasScanned    = false
     @Published var errorMessage: String?
+    @Published var lastScanDate: Date?
+
+    private let cacheKey          = "bilancoSignals_v1"
+    private let cacheDateKey      = "bilancoScanDate_v1"
+    private let cacheTotalKey     = "bilancoTotal_v1"
+    private let cacheDataFoundKey = "bilancoDataFound_v1"
 
     private var scanTask: Task<Void, Never>?
+
+    init() {
+        loadCachedSignals()
+    }
 
     func startScan(stocks: [Stock]) {
         guard !isScanning else { return }
@@ -91,9 +101,35 @@ final class BilancoViewModel: ObservableObject {
                 }
                 return abs($0.netIncomeChangePercent) > abs($1.netIncomeChangePercent)
             }
-            hasScanned = true
+            hasScanned    = true
+            lastScanDate  = Date()
+            saveSignals()
         }
         isScanning = false
+    }
+
+    // MARK: - Cache
+
+    private func saveSignals() {
+        guard let data = try? JSONEncoder().encode(signals) else { return }
+        UserDefaults.standard.set(data, forKey: cacheKey)
+        UserDefaults.standard.set(totalCount,     forKey: cacheTotalKey)
+        UserDefaults.standard.set(dataFoundCount, forKey: cacheDataFoundKey)
+        if let date = lastScanDate {
+            UserDefaults.standard.set(date, forKey: cacheDateKey)
+        }
+    }
+
+    private func loadCachedSignals() {
+        lastScanDate   = UserDefaults.standard.object(forKey: cacheDateKey) as? Date
+        totalCount     = UserDefaults.standard.integer(forKey: cacheTotalKey)
+        dataFoundCount = UserDefaults.standard.integer(forKey: cacheDataFoundKey)
+        guard
+            let data    = UserDefaults.standard.data(forKey: cacheKey),
+            let decoded = try? JSONDecoder().decode([FinancialSignal].self, from: data)
+        else { return }
+        signals    = decoded
+        hasScanned = !signals.isEmpty
     }
 
     // MARK: - Sinyal Analizi
