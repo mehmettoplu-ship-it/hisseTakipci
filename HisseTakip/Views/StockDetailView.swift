@@ -25,6 +25,8 @@ struct StockDetailView: View {
                 } else {
                     externalLinksRow
                     indicatorsPanel
+                    financialSection
+                        .padding(.top, 8)
                 }
             }
         }
@@ -217,5 +219,149 @@ struct StockDetailView: View {
         if v >= 1_000_000 { return String(format: "%.1fM", v / 1_000_000) }
         if v >= 1_000     { return String(format: "%.0fK", v / 1_000) }
         return String(format: "%.0f", v)
+    }
+
+    // MARK: - Finansal Analiz Bölümü
+
+    @ViewBuilder
+    private var financialSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Başlık
+            HStack {
+                Label("Finansal Analiz", systemImage: "building.columns.fill")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if vm.isLoadingFinancial {
+                    ProgressView().scaleEffect(0.7)
+                }
+            }
+            .padding(.horizontal)
+            .padding(.bottom, 10)
+
+            if let sig = vm.financialSignal {
+                financialSignalBadge(sig)
+                    .padding(.horizontal)
+                    .padding(.bottom, 10)
+            }
+
+            if !vm.statements.isEmpty {
+                quarterlyTable
+                    .padding(.horizontal)
+            } else if !vm.isLoadingFinancial {
+                HStack {
+                    Image(systemName: "chart.bar.xaxis")
+                        .foregroundStyle(.tertiary)
+                    Text("Finansal veri bulunamadı")
+                        .font(.caption).foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal)
+            }
+        }
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 0)
+                .fill(Color(.systemGray6).opacity(0.5))
+        )
+    }
+
+    private func financialSignalBadge(_ sig: FinancialSignal) -> some View {
+        let color = signalColor(sig.type)
+        return HStack(spacing: 10) {
+            Text(sig.type.emoji)
+                .font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(sig.type.rawValue)
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(color)
+                Text("Son dönem: \(sig.period) · Net Kâr: \(formatMoney(sig.currentNetIncome))")
+                    .font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Text(String(format: "%+.0f%%", sig.netIncomeChangePercent))
+                .font(.system(size: 13, weight: .black, design: .monospaced))
+                .foregroundStyle(sig.netIncomeChangePercent >= 0
+                    ? Color(red: 0.1, green: 0.85, blue: 0.55) : .red)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(color.opacity(0.1))
+                .overlay(RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(color.opacity(0.25), lineWidth: 1))
+        )
+    }
+
+    private var quarterlyTable: some View {
+        VStack(spacing: 1) {
+            // Tablo başlığı
+            HStack(spacing: 0) {
+                Text("Dönem").frame(width: 68, alignment: .leading)
+                Text("Gelir").frame(maxWidth: .infinity, alignment: .trailing)
+                Text("Net Kâr").frame(maxWidth: .infinity, alignment: .trailing)
+                Text("Marj").frame(width: 54, alignment: .trailing)
+            }
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+
+            ForEach(Array(vm.statements.prefix(5).enumerated()), id: \.offset) { i, s in
+                HStack(spacing: 0) {
+                    Text(s.periodLabel)
+                        .font(.system(size: 11, weight: i == 0 ? .bold : .regular, design: .monospaced))
+                        .foregroundStyle(i == 0 ? .primary : .secondary)
+                        .frame(width: 68, alignment: .leading)
+
+                    Text(formatMoney(s.revenue))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(i == 0 ? .primary : .secondary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+
+                    Text(formatMoney(s.netIncome))
+                        .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(s.isProfit
+                            ? Color(red: 0.1, green: 0.85, blue: 0.55) : .red)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+
+                    Text(String(format: "%.1f%%", s.netMargin * 100))
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(s.isProfit ? .secondary : .red.opacity(0.8))
+                        .frame(width: 54, alignment: .trailing)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(i == 0
+                    ? Color(.systemBackground).opacity(0.6)
+                    : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(.systemGray6))
+        )
+    }
+
+    private func signalColor(_ type: FinancialSignalType) -> Color {
+        switch type {
+        case .turningProfitable:        return Color(red: 0.1,  green: 0.85, blue: 0.55)
+        case .approachingProfit:        return Color(red: 1.0,  green: 0.55, blue: 0.0)
+        case .consecutiveLossReduction: return Color(red: 0.3,  green: 0.7,  blue: 1.0)
+        case .ebitTurnaround:           return Color(red: 0.6,  green: 0.85, blue: 0.3)
+        case .lossReducing:             return Color(red: 0.2,  green: 0.6,  blue: 1.0)
+        case .operatingLeverage:        return Color(red: 0.0,  green: 0.75, blue: 0.85)
+        case .profitConsistency:        return Color(red: 0.95, green: 0.35, blue: 0.6)
+        case .profitGrowing:            return Color(red: 1.0,  green: 0.72, blue: 0.0)
+        case .revenueGrowing:           return Color(red: 0.7,  green: 0.3,  blue: 1.0)
+        }
+    }
+
+    private func formatMoney(_ v: Double) -> String {
+        let a = Swift.abs(v); let p = v < 0 ? "-" : ""
+        if a >= 1_000_000_000 { return "\(p)\(String(format: "%.1f", a / 1_000_000_000))B₺" }
+        if a >= 1_000_000     { return "\(p)\(String(format: "%.0f", a / 1_000_000))M₺" }
+        if a >= 1_000         { return "\(p)\(String(format: "%.0f", a / 1_000))K₺" }
+        return "\(p)\(String(format: "%.0f", a))₺"
     }
 }

@@ -11,8 +11,8 @@ struct ContentView: View {
                 .tabItem { Label("Ana Sayfa", systemImage: "house.fill") }
                 .tag(0)
 
-            FavoritesView()
-                .tabItem { Label("Favoriler", systemImage: "star.fill") }
+            StockSearchView()
+                .tabItem { Label("Analiz", systemImage: "magnifyingglass.circle.fill") }
                 .tag(1)
 
             ScannerView()
@@ -28,9 +28,13 @@ struct ContentView: View {
                 .tabItem { Label("Bilanço", systemImage: "building.columns.fill") }
                 .tag(4)
 
+            FavoritesView()
+                .tabItem { Label("Favoriler", systemImage: "star.fill") }
+                .tag(5)
+
             SettingsView()
                 .tabItem { Label("Ayarlar", systemImage: "gearshape") }
-                .tag(5)
+                .tag(6)
         }
         .preferredColorScheme(.dark)
         .task {
