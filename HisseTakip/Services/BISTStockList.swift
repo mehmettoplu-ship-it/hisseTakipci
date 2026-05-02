@@ -268,7 +268,150 @@ enum BISTStockList {
         Stock(id: "PNLSN.IS", symbol: "PNLSN", name: "Panelsan",         sector: "Elektrik"),
 
         // MARK: - Tarım
-        Stock(id: "ALYAG.IS", symbol: "ALYAG", name: "Alaçatı Yağ",     sector: "Tarım"),
+        Stock(id: "ALYAG.IS", symbol: "ALYAG", name: "Alaçatı Yağ",       sector: "Tarım"),
+        Stock(id: "OYLUM.IS", symbol: "OYLUM", name: "Oylum Sınai Yatırım", sector: "Tarım"),
+        Stock(id: "YYLGD.IS", symbol: "YYLGD", name: "Yayla Agro Gıda",   sector: "Tarım"),
+
+        // MARK: - Ek Sanayi & Üretim
+        Stock(id: "ADEL.IS",  symbol: "ADEL",  name: "Adel Kalemcilik",      sector: "Sanayi"),
+        Stock(id: "MAKIM.IS", symbol: "MAKIM", name: "Makine Takım End.",    sector: "Sanayi"),
+        Stock(id: "MEGMT.IS", symbol: "MEGMT", name: "Megmetal Makina",      sector: "Sanayi"),
+        Stock(id: "SAMAT.IS", symbol: "SAMAT", name: "Samat Makina",         sector: "Sanayi"),
+        Stock(id: "GEREL.IS", symbol: "GEREL", name: "Gersan Elektrik",      sector: "Sanayi"),
+        Stock(id: "OSMEN.IS", symbol: "OSMEN", name: "Osman Endüstri",       sector: "Sanayi"),
+        Stock(id: "OSTIM.IS", symbol: "OSTIM", name: "Ostim Endüstriyel",   sector: "Sanayi"),
+        Stock(id: "ACSEL.IS", symbol: "ACSEL", name: "Acıselsan Kablo",      sector: "Sanayi"),
+        Stock(id: "ERBOS.IS", symbol: "ERBOS", name: "Erbosan Erciyas Boru", sector: "Metal"),
+        Stock(id: "GENTS.IS", symbol: "GENTS", name: "Gentaş Metal San.",    sector: "Metal"),
+        Stock(id: "TMSN.IS",  symbol: "TMSN",  name: "Tomsan Kablo",         sector: "Metal"),
+        Stock(id: "BRVAG.IS", symbol: "BRVAG", name: "Birvagas",             sector: "Metal"),
+        Stock(id: "ALVES.IS", symbol: "ALVES", name: "Alves Elektromekanik", sector: "Metal"),
+        Stock(id: "GEDZA.IS", symbol: "GEDZA", name: "Gediz Ambalaj",        sector: "Metal"),
+
+        // MARK: - Ek Tekstil
+        Stock(id: "EDIP.IS",  symbol: "EDIP",  name: "Edip İplik",           sector: "Tekstil"),
+        Stock(id: "MNDRS.IS", symbol: "MNDRS", name: "Menderes Tekstil",     sector: "Tekstil"),
+        Stock(id: "ROYAL.IS", symbol: "ROYAL", name: "Royal Halı",           sector: "Tekstil"),
+        Stock(id: "SONS.IS",  symbol: "SONS",  name: "Sönmez Filament",      sector: "Tekstil"),
+        Stock(id: "ASTER.IS", symbol: "ASTER", name: "Aster Tekstil",        sector: "Tekstil"),
+        Stock(id: "DMSAS.IS", symbol: "DMSAS", name: "Demisaş Döküm",       sector: "Tekstil"),
+
+        // MARK: - Ek Kimya & Boya
+        Stock(id: "DYOBY.IS", symbol: "DYOBY", name: "DYO Boya",             sector: "Kimya"),
+        Stock(id: "MRSHL.IS", symbol: "MRSHL", name: "Marshall Boya",        sector: "Kimya"),
+        Stock(id: "PIMAS.IS", symbol: "PIMAS", name: "Pimas Plastik",        sector: "Kimya"),
+        Stock(id: "ORCAY.IS", symbol: "ORCAY", name: "Orcay Organik",        sector: "Kimya"),
+        Stock(id: "HUNER.IS", symbol: "HUNER", name: "Hüner Kimya",          sector: "Kimya"),
+
+        // MARK: - Ek Enerji & Elektrik
+        Stock(id: "ASTOR.IS", symbol: "ASTOR", name: "Astor Enerji",         sector: "Enerji"),
+        Stock(id: "AYDEM.IS", symbol: "AYDEM", name: "Aydem Enerji",         sector: "Enerji"),
+        Stock(id: "MANAS.IS", symbol: "MANAS", name: "Manas Enerji",         sector: "Enerji"),
+        Stock(id: "GESAN.IS", symbol: "GESAN", name: "Gesan Enerji Sis.",    sector: "Enerji"),
+        Stock(id: "MIPAZ.IS", symbol: "MIPAZ", name: "Mipaz Petrol",         sector: "Enerji"),
+        Stock(id: "AKFYE.IS", symbol: "AKFYE", name: "Akfen Yenilenebilir",  sector: "Enerji"),
+        Stock(id: "ULUSE.IS", symbol: "ULUSE", name: "Ulusoy Elektrik",      sector: "Elektrik"),
+        Stock(id: "MAGEN.IS", symbol: "MAGEN", name: "Mavi Gök Enerji",      sector: "Enerji"),
+        Stock(id: "SEYKM.IS", symbol: "SEYKM", name: "Seykum",               sector: "Enerji"),
+        Stock(id: "EUREN.IS", symbol: "EUREN", name: "Euro Enerji",           sector: "Enerji"),
+        Stock(id: "DENGE.IS", symbol: "DENGE", name: "Denge Enerji",          sector: "Enerji"),
+
+        // MARK: - Ek Teknoloji & Bilişim
+        Stock(id: "ARMDA.IS", symbol: "ARMDA", name: "Armada Bilgisayar",    sector: "Teknoloji"),
+        Stock(id: "FONET.IS", symbol: "FONET", name: "Fonet Bilişim",        sector: "Teknoloji"),
+        Stock(id: "FORTE.IS", symbol: "FORTE", name: "Forte Bilişim",        sector: "Teknoloji"),
+        Stock(id: "INVEO.IS", symbol: "INVEO", name: "İnveo Portföy",        sector: "Teknoloji"),
+        Stock(id: "KFEIN.IS", symbol: "KFEIN", name: "Kafein Yazılım",       sector: "Teknoloji"),
+        Stock(id: "MTRKS.IS", symbol: "MTRKS", name: "Matreks Bilişim",      sector: "Teknoloji"),
+        Stock(id: "PENTA.IS", symbol: "PENTA", name: "Penta Teknoloji",      sector: "Teknoloji"),
+        Stock(id: "PKART.IS", symbol: "PKART", name: "Plastikkart",          sector: "Teknoloji"),
+        Stock(id: "ARDYZ.IS", symbol: "ARDYZ", name: "Ardıç Yazılım",       sector: "Teknoloji"),
+        Stock(id: "DESPC.IS", symbol: "DESPC", name: "Despec Bilgisayar",   sector: "Teknoloji"),
+        Stock(id: "MOBTL.IS", symbol: "MOBTL", name: "Mobil Teknoloji",      sector: "Teknoloji"),
+        Stock(id: "ARENA.IS", symbol: "ARENA", name: "Arena Bilgisayar",     sector: "Teknoloji"),
+
+        // MARK: - Ek Sağlık
+        Stock(id: "LKMNH.IS", symbol: "LKMNH", name: "Lokman Hekim",         sector: "Sağlık"),
+        Stock(id: "GLBMD.IS", symbol: "GLBMD", name: "Global Medikal",       sector: "Sağlık"),
+        Stock(id: "MEDTR.IS", symbol: "MEDTR", name: "Meditera Tıbbi",       sector: "Sağlık"),
+        Stock(id: "BIGEN.IS", symbol: "BIGEN", name: "Bilim Ecza Deposu",   sector: "İlaç"),
+        Stock(id: "ADESE.IS", symbol: "ADESE", name: "Adese Alışveriş",     sector: "Sağlık"),
+
+        // MARK: - Ek Perakende & Gıda
+        Stock(id: "METRO.IS", symbol: "METRO", name: "Metro Ticaret",        sector: "Perakende"),
+        Stock(id: "KILER.IS", symbol: "KILER", name: "Kiler Alışveriş",     sector: "Perakende"),
+        Stock(id: "KOFAZ.IS", symbol: "KOFAZ", name: "Kofaz Gıda",          sector: "Gıda"),
+        Stock(id: "ARASE.IS", symbol: "ARASE", name: "Araş Gıda",           sector: "Gıda"),
+        Stock(id: "OLMKS.IS", symbol: "OLMKS", name: "Olmuksa Int. Paper",  sector: "Gıda"),
+
+        // MARK: - Ek GYO
+        Stock(id: "AKFGY.IS", symbol: "AKFGY", name: "Akfen GYO",           sector: "GYO"),
+        Stock(id: "AKMGY.IS", symbol: "AKMGY", name: "Akmerkez GYO",        sector: "GYO"),
+        Stock(id: "MRGYO.IS", symbol: "MRGYO", name: "Merkez GYO",          sector: "GYO"),
+        Stock(id: "RYGYO.IS", symbol: "RYGYO", name: "Rya GYO",             sector: "GYO"),
+        Stock(id: "VEGYO.IS", symbol: "VEGYO", name: "Vega GYO",            sector: "GYO"),
+        Stock(id: "ZRGYO.IS", symbol: "ZRGYO", name: "Ziraat GYO",          sector: "GYO"),
+        Stock(id: "YKGYO.IS", symbol: "YKGYO", name: "Yapı Kredi GYO",     sector: "GYO"),
+        Stock(id: "DZGYO.IS", symbol: "DZGYO", name: "Denizbank GYO",       sector: "GYO"),
+        Stock(id: "OYGYO.IS", symbol: "OYGYO", name: "Oyaş GYO",            sector: "GYO"),
+        Stock(id: "ESCAR.IS", symbol: "ESCAR", name: "Escort Hizmetleri",   sector: "İnşaat"),
+        Stock(id: "YKONT.IS", symbol: "YKONT", name: "Yüksel Proje",        sector: "İnşaat"),
+        Stock(id: "INTEM.IS", symbol: "INTEM", name: "İntema Yapı",          sector: "İnşaat"),
+        Stock(id: "VARYA.IS", symbol: "VARYA", name: "Varyap",              sector: "İnşaat"),
+
+        // MARK: - Ek Cam & Seramik
+        Stock(id: "CANTR.IS", symbol: "CANTR", name: "Çanakkale Seramik",  sector: "Seramik"),
+        Stock(id: "KTSKE.IS", symbol: "KTSKE", name: "Kütahya Seramik",    sector: "Seramik"),
+        Stock(id: "EGSER.IS", symbol: "EGSER", name: "Ege Seramik",        sector: "Seramik"),
+        Stock(id: "USAK.IS",  symbol: "USAK",  name: "Uşak Seramik",       sector: "Seramik"),
+        Stock(id: "KBORU.IS", symbol: "KBORU", name: "Krone Boru",         sector: "Cam"),
+
+        // MARK: - Ek Holding & Finans
+        Stock(id: "GSDHO.IS", symbol: "GSDHO", name: "GSD Holding",         sector: "Holding"),
+        Stock(id: "MARKA.IS", symbol: "MARKA", name: "Marka Yatırım Hld.",  sector: "Holding"),
+        Stock(id: "HTTBT.IS", symbol: "HTTBT", name: "Hattat Holding",       sector: "Holding"),
+        Stock(id: "KCFIN.IS", symbol: "KCFIN", name: "Koç Finansman",       sector: "Finans"),
+        Stock(id: "SEKFK.IS", symbol: "SEKFK", name: "Şeker Faktoring",    sector: "Finans"),
+        Stock(id: "QNBFL.IS", symbol: "QNBFL", name: "QNB Finansleasing",  sector: "Finans"),
+        Stock(id: "VAKFN.IS", symbol: "VAKFN", name: "Vakıf Fin. Kiralama", sector: "Finans"),
+        Stock(id: "YKFIN.IS", symbol: "YKFIN", name: "YKF Finansal Kir.",   sector: "Finans"),
+        Stock(id: "TRILC.IS", symbol: "TRILC", name: "Türkiye İş Leasing", sector: "Finans"),
+        Stock(id: "GEDIK.IS", symbol: "GEDIK", name: "Gedik Yatırım",       sector: "Finans"),
+        Stock(id: "AGESA.IS", symbol: "AGESA", name: "AGesa Sigorta",        sector: "Sigorta"),
+
+        // MARK: - Ek Turizm
+        Stock(id: "MERIT.IS", symbol: "MERIT", name: "Merit Turizm",        sector: "Turizm"),
+        Stock(id: "AYCES.IS", symbol: "AYCES", name: "Altınyunus Çeşme",   sector: "Turizm"),
+        Stock(id: "CRFSA.IS", symbol: "CRFSA", name: "Carrefour SA",        sector: "Turizm"),
+        Stock(id: "SEDEN.IS", symbol: "SEDEN", name: "Sedef Tersanesi",     sector: "Turizm"),
+
+        // MARK: - Ek Madencilik
+        Stock(id: "GMTAS.IS", symbol: "GMTAS", name: "Gümüştaş Madencilik", sector: "Madencilik"),
+        Stock(id: "SELGD.IS", symbol: "SELGD", name: "Sel Girişim",         sector: "Madencilik"),
+
+        // MARK: - Bankacılık (Ek)
+        Stock(id: "ODEABANK.IS",  symbol: "ODEABANK",  name: "Odeabank",    sector: "Bankacılık"),
+        Stock(id: "FIBABANKA.IS", symbol: "FIBABANKA", name: "Fibabanka",   sector: "Bankacılık"),
+
+        // MARK: - Kağıt & Ambalaj
+        Stock(id: "KARTN.IS", symbol: "KARTN", name: "Kartonsan",           sector: "Kağıt"),
+        Stock(id: "BAKAB.IS", symbol: "BAKAB", name: "Bak Ambalaj",         sector: "Kağıt"),
+        Stock(id: "TEZOL.IS", symbol: "TEZOL", name: "Tezol Kağıt",        sector: "Kağıt"),
+        Stock(id: "SNPAM.IS", symbol: "SNPAM", name: "Şenpazar Ambalaj",   sector: "Kağıt"),
+
+        // MARK: - Lojistik & Denizcilik
+        Stock(id: "GSDDE.IS", symbol: "GSDDE", name: "GSD Denizcilik",      sector: "Denizcilik"),
+        Stock(id: "SEDEF.IS", symbol: "SEDEF", name: "Sedef Tersanesi",     sector: "Denizcilik"),
+        Stock(id: "ULASL.IS", symbol: "ULASL", name: "Ulaşlar Turizm",     sector: "Lojistik"),
+        Stock(id: "AVTUR.IS", symbol: "AVTUR", name: "Avrasya Petrol",      sector: "Lojistik"),
+        Stock(id: "KONTR.IS", symbol: "KONTR", name: "Kontrolmatik",        sector: "Lojistik"),
+        Stock(id: "MEPET.IS", symbol: "MEPET", name: "Mepet Metro",         sector: "Lojistik"),
+
+        // MARK: - Otomotiv (Ek)
+        Stock(id: "RENTA.IS", symbol: "RENTA", name: "Rentaş",              sector: "Otomotiv"),
+
+        // MARK: - Elektronik (Ek)
+        Stock(id: "SIMGE.IS", symbol: "SIMGE", name: "Simge Reklam",        sector: "Elektronik"),
     ]
 
     // Geriye dönük uyumluluk

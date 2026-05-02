@@ -26,6 +26,8 @@ enum FinancialSignalType: String, CaseIterable {
     case consecutiveLossReduction = "Sürekli İyileşme"
     case ebitTurnaround           = "FAVÖK Toparlandı"
     case lossReducing             = "Zarar Azalıyor"
+    case operatingLeverage        = "Operasyonel Kaldıraç"
+    case profitConsistency        = "İstikrarlı Kâr"
     case profitGrowing            = "Kar Büyüyor"
     case revenueGrowing           = "Gelir Artışı"
 
@@ -36,6 +38,8 @@ enum FinancialSignalType: String, CaseIterable {
         case .consecutiveLossReduction: return "📊"
         case .ebitTurnaround:           return "⚙️"
         case .lossReducing:             return "📉"
+        case .operatingLeverage:        return "⚡"
+        case .profitConsistency:        return "🏆"
         case .profitGrowing:            return "📈"
         case .revenueGrowing:           return "💰"
         }
@@ -48,8 +52,10 @@ enum FinancialSignalType: String, CaseIterable {
         case .consecutiveLossReduction: return 2
         case .ebitTurnaround:           return 3
         case .lossReducing:             return 4
-        case .profitGrowing:            return 5
-        case .revenueGrowing:           return 6
+        case .operatingLeverage:        return 5
+        case .profitConsistency:        return 6
+        case .profitGrowing:            return 7
+        case .revenueGrowing:           return 8
         }
     }
 }

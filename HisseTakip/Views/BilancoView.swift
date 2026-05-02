@@ -46,26 +46,23 @@ struct BilancoView: View {
     private var statsBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
-                statBox(count: vm.signals.filter { $0.type == .turningProfitable }.count,
-                        label: "Kara\nGeçiş",     color: Color(red: 0.1,  green: 0.85, blue: 0.55))
+                statBox(type: .turningProfitable,        label: "Kara\nGeçiş",       color: Color(red: 0.1,  green: 0.85, blue: 0.55))
                 statDivider()
-                statBox(count: vm.signals.filter { $0.type == .approachingProfit }.count,
-                        label: "Kâra\nYakın",     color: Color(red: 1.0,  green: 0.55, blue: 0.0))
+                statBox(type: .approachingProfit,        label: "Kâra\nYakın",       color: Color(red: 1.0,  green: 0.55, blue: 0.0))
                 statDivider()
-                statBox(count: vm.signals.filter { $0.type == .consecutiveLossReduction }.count,
-                        label: "Sürekli\nİyileşme", color: Color(red: 0.3, green: 0.7,  blue: 1.0))
+                statBox(type: .consecutiveLossReduction, label: "Sürekli\nİyileşme", color: Color(red: 0.3,  green: 0.7,  blue: 1.0))
                 statDivider()
-                statBox(count: vm.signals.filter { $0.type == .ebitTurnaround }.count,
-                        label: "FAVÖK\nToparlandı", color: Color(red: 0.6, green: 0.85, blue: 0.3))
+                statBox(type: .ebitTurnaround,           label: "FAVÖK\nToparlandı", color: Color(red: 0.6,  green: 0.85, blue: 0.3))
                 statDivider()
-                statBox(count: vm.signals.filter { $0.type == .lossReducing }.count,
-                        label: "Zarar\nAzalıyor", color: Color(red: 0.2,  green: 0.6,  blue: 1.0))
+                statBox(type: .lossReducing,             label: "Zarar\nAzalıyor",   color: Color(red: 0.2,  green: 0.6,  blue: 1.0))
                 statDivider()
-                statBox(count: vm.signals.filter { $0.type == .profitGrowing }.count,
-                        label: "Kar\nBüyüyor",    color: Color(red: 1.0,  green: 0.72, blue: 0.0))
+                statBox(type: .operatingLeverage,        label: "Op.\nKaldıraç",     color: Color(red: 0.0,  green: 0.75, blue: 0.85))
                 statDivider()
-                statBox(count: vm.signals.filter { $0.type == .revenueGrowing }.count,
-                        label: "Gelir\nArtışı",   color: Color(red: 0.7,  green: 0.3,  blue: 1.0))
+                statBox(type: .profitConsistency,        label: "İstikrarlı\nKâr",   color: Color(red: 0.95, green: 0.35, blue: 0.6))
+                statDivider()
+                statBox(type: .profitGrowing,            label: "Kar\nBüyüyor",      color: Color(red: 1.0,  green: 0.72, blue: 0.0))
+                statDivider()
+                statBox(type: .revenueGrowing,           label: "Gelir\nArtışı",     color: Color(red: 0.7,  green: 0.3,  blue: 1.0))
             }
             .padding(.horizontal, 8)
         }
@@ -75,18 +72,29 @@ struct BilancoView: View {
         Divider().frame(height: 40).opacity(0.5)
     }
 
-    private func statBox(count: Int, label: String, color: Color) -> some View {
-        VStack(spacing: 3) {
-            Text("\(count)")
-                .font(.system(size: 20, weight: .black, design: .rounded))
-                .foregroundStyle(count > 0 ? color : .secondary)
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+    private func statBox(type: FinancialSignalType, label: String, color: Color) -> some View {
+        let count      = vm.signals.filter { $0.type == type }.count
+        let isSelected = filterType == type
+        return Button {
+            filterType = (filterType == type) ? nil : type
+        } label: {
+            VStack(spacing: 3) {
+                Text("\(count)")
+                    .font(.system(size: 20, weight: .black, design: .rounded))
+                    .foregroundStyle(count > 0 ? color : .secondary)
+                Text(label)
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(isSelected ? color : .secondary)
+                    .multilineTextAlignment(.center)
+            }
+            .frame(minWidth: 68)
+            .padding(.horizontal, 4)
+            .padding(.vertical, 6)
+            .background(isSelected ? color.opacity(0.15) : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .frame(minWidth: 68)
-        .padding(.horizontal, 4)
+        .buttonStyle(.plain)
+        .disabled(count == 0)
     }
 
     // MARK: - Taranıyor
@@ -276,6 +284,8 @@ struct FinancialSignalCard: View {
         case .consecutiveLossReduction: return Color(red: 0.3,  green: 0.7,  blue: 1.0)
         case .ebitTurnaround:           return Color(red: 0.6,  green: 0.85, blue: 0.3)
         case .lossReducing:             return Color(red: 0.2,  green: 0.6,  blue: 1.0)
+        case .operatingLeverage:        return Color(red: 0.0,  green: 0.75, blue: 0.85)
+        case .profitConsistency:        return Color(red: 0.95, green: 0.35, blue: 0.6)
         case .profitGrowing:            return Color(red: 1.0,  green: 0.72, blue: 0.0)
         case .revenueGrowing:           return Color(red: 0.7,  green: 0.3,  blue: 1.0)
         }
@@ -394,7 +404,6 @@ struct FinancialSignalCard: View {
             }
 
         case .ebitTurnaround:
-            // FAVÖK (operasyonel kâr) değeri ve marjı
             let ebitMargin = signal.currentRevenue != 0
                 ? signal.currentOperatingIncome / signal.currentRevenue * 100 : 0
             HStack(spacing: 6) {
@@ -404,6 +413,28 @@ struct FinancialSignalCard: View {
                 infoTag(
                     text: String(format: "FAVÖK Marjı: %.1f%%", ebitMargin),
                     color: Color(red: 0.6, green: 0.85, blue: 0.3))
+                Spacer()
+            }
+
+        case .operatingLeverage:
+            HStack(spacing: 6) {
+                infoTag(
+                    text: String(format: "Gelir %+.0f%%", signal.revenueChangePercent),
+                    color: Color(red: 0.0, green: 0.75, blue: 0.85))
+                infoTag(
+                    text: String(format: "Faal. Kâr %+.0f%%", signal.operatingIncomeChangePercent),
+                    color: Color(red: 0.0, green: 0.75, blue: 0.85))
+                Spacer()
+            }
+
+        case .profitConsistency:
+            HStack(spacing: 6) {
+                infoTag(text: "4 çeyrek kârlı", color: Color(red: 0.95, green: 0.35, blue: 0.6))
+                if let yoy = signal.yoyNetIncomeChangePercent {
+                    infoTag(
+                        text: String(format: "YoY %+.0f%%", yoy),
+                        color: Color(red: 0.95, green: 0.35, blue: 0.6))
+                }
                 Spacer()
             }
 

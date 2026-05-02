@@ -20,6 +20,8 @@ actor StockListService {
         return URLSession(configuration: config)
     }()
 
+    private var didBootstrap = false
+
     // MARK: - Screener Body
 
     private func makeScreenerBody(offset: Int, size: Int) -> Data? {
@@ -54,9 +56,25 @@ actor StockListService {
         return await loadStocks()
     }
 
-    // MARK: - Fetch (cookie bazlı, crumb gerektirmeyen endpoint)
+    // MARK: - Bootstrap
+
+    private func bootstrap() async {
+        guard !didBootstrap else { return }
+        didBootstrap = true
+        let ua = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+        if let url = URL(string: "https://finance.yahoo.com") {
+            var req = URLRequest(url: url)
+            req.setValue(ua, forHTTPHeaderField: "User-Agent")
+            req.setValue("en-US,en;q=0.9", forHTTPHeaderField: "Accept-Language")
+            req.timeoutInterval = 10
+            _ = try? await session.data(for: req)
+        }
+    }
+
+    // MARK: - Fetch
 
     private func fetchAll() async throws -> [Stock] {
+        await bootstrap()
         var all: [Stock] = []
         var offset = 0
         let pageSize = 250

@@ -177,6 +177,21 @@ final class BilancoViewModel: ObservableObject {
             sigs.append(sig(.revenueGrowing))
         }
 
+        // 8. Operasyonel Kaldıraç — gelir büyüyor, faaliyet kârı daha hızlı büyüyor (ölçek verimliliği)
+        if q0.revenue > 0, q1.revenue > 0,
+           q0.operatingIncome > 0, q1.operatingIncome > 0,
+           revChange > 5,
+           opChange > revChange + 10 {
+            sigs.append(sig(.operatingLeverage))
+        }
+
+        // 9. İstikrarlı Kâr — 4 çeyrek kârlı ve yıllık net kâr %10+ büyüme
+        if let q2v = q2, let q3v = q3,
+           q0.isProfit, q1.isProfit, q2v.isProfit, q3v.isProfit,
+           let yoy = yoyNI, yoy > 10 {
+            sigs.append(sig(.profitConsistency))
+        }
+
         return sigs
     }
 }
