@@ -11,7 +11,7 @@ struct ContentView: View {
                 .tabItem { Label("Ana Sayfa", systemImage: "house.fill") }
                 .tag(0)
 
-            StockSearchView()
+            StockSearchView(selectedTab: $selectedTab)
                 .tabItem { Label("Analiz", systemImage: "magnifyingglass.circle.fill") }
                 .tag(1)
 

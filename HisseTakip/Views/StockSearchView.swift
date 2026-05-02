@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct StockSearchView: View {
+    @Binding var selectedTab: Int
     @EnvironmentObject private var scanner: ScannerViewModel
     @State private var query         = ""
     @State private var recentIDs: [String] = []
@@ -56,6 +57,22 @@ struct StockSearchView: View {
             }
             .navigationTitle("Hisse Analiz")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        focused = false
+                        selectedTab = 0
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "house.fill")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("Ana Sayfa")
+                                .font(.system(size: 14, weight: .semibold))
+                        }
+                        .foregroundStyle(Color(red: 0.2, green: 0.5, blue: 1.0))
+                    }
+                }
+            }
             .onAppear { loadRecents() }
         }
     }
