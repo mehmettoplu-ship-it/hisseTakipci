@@ -1,0 +1,442 @@
+================================================================
+        HİSSE TAKİP — TARAMA STRATEJİLERİ KILAVUZU
+================================================================
+Toplam Strateji: 11
+Güncelleme: Mayıs 2026
+================================================================
+
+
+----------------------------------------------------------------
+1. 🚀 DİRENÇ KIRILMASI
+----------------------------------------------------------------
+NE YAPAR:
+  Hisse senedinin son 20 günlük en yüksek seviyesini (zirveyi)
+  güçlü bir hacimle yukarı kırdığını tespit eder.
+
+KOŞULLAR:
+  - Fiyat, 20 günlük zirveden en az %0.5 daha yüksekte kapanmış olmalı
+  - Hacim, 20 günlük ortalama hacmin 2 katından fazla olmalı (2x+)
+  - RSI 42 ile 68 arasında olmalı (aşırı alım bölgesinde değil)
+  - Confluence skoru en az 2/5 olmalı
+
+GÜÇLÜ SİNYAL:
+  Hacim ortalama hacmin 3 katından fazlaysa (3x+) → Güçlü
+  Aksi halde → Orta
+
+MANTIK:
+  Bir direnç seviyesi kırıldığında ve bunu yüksek hacim
+  destekliyorsa, o kırılma "sahte" değil "gerçek" sayılır.
+  Düşük hacimli kırılmalar çoğunlukla geri döner. 2x hacim
+  şartı bu tuzağı önler. RSI'nın 68 altında olması şartı ise
+  hissenin zaten aşırı alınmış olmadığını garantiler.
+
+NE ZAMAN TETİKLENİR:
+  Seyrek — yalnızca gerçek momentum kırılmalarında.
+
+
+----------------------------------------------------------------
+2. 🔄 RSI DİP DÖNÜŞÜ
+----------------------------------------------------------------
+NE YAPAR:
+  Aşırı satılmış (oversold) bir hissenin dip noktasından
+  döndüğünü, hem RSI hem de MACD'nin aynı anda teyit ettiğini
+  tespit eder.
+
+KOŞULLAR:
+  - Önceki mumda RSI 28'in altında olmalı (derin aşırı satım)
+  - Son mumda RSI tekrar 28'in üzerine çıkmış olmalı
+  - MACD histogramı: önceki mumda negatif, son mumda pozitif
+    (yani MACD da aynı anda döndü — çift teyit)
+  - Confluence skoru en az 2/5
+
+GÜÇLÜ SİNYAL:
+  RSI 24'ün altından döndüyse → Güçlü (çok derin dip)
+  28'den döndüyse → Orta
+
+MANTIK:
+  Tek başına RSI'nın 30 altına girmesi yeterli değildir,
+  çünkü hisse daha da düşebilir. Bu strateji iki şartı birden
+  arar: RSI'nın dönüş yapması (aşağı değil yukarı geçmesi)
+  VE MACD'nin de aynı anda negatiften pozitife geçmesi.
+  İki bağımsız göstergenin aynı anda dönüş sinyali vermesi
+  güvenilirliği çok artırır.
+
+NE ZAMAN TETİKLENİR:
+  Orta sıklıkta — panik satışlarının ardından dipte.
+
+
+----------------------------------------------------------------
+3. ⚡ EMA ALTIN KESİŞİM (EMA9 / EMA21)
+----------------------------------------------------------------
+NE YAPAR:
+  Kısa vadeli (9 günlük) üssel hareketli ortalama, orta vadeli
+  (21 günlük) üssel hareketli ortalamayı aşağıdan yukarı kestiğinde
+  tespit eder. Kısa vadeli momentum dönüşü sinyali.
+
+KOŞULLAR:
+  - Önceki mumda EMA9 < EMA21 (altında)
+  - Son mumda EMA9 > EMA21 (üstüne geçti — taze kesişim)
+  - Fiyat, EMA50'nin üzerinde olmalı (ana trend yukarı)
+  - RSI 45'in üzerinde
+  - Hacim, ortalama hacmin en az 0.9 katı
+  - Confluence skoru en az 2/5
+
+GÜÇLÜ SİNYAL:
+  Hacim 1.5x+ VE RSI 52 üzerindeyse → Güçlü
+  Aksi halde → Orta
+
+MANTIK:
+  EMA9'un EMA21'i kesmesi kısa vadeli momentumun döndüğünü
+  gösterir. Fiyatın EMA50 üzerinde olması şartı, bu kesişimin
+  genel bir yükseliş trendi içinde gerçekleştiğini doğrular —
+  trende karşı sinyaller genellikle başarısız olur.
+
+NE ZAMAN TETİKLENİR:
+  Orta sıklıkta.
+
+
+----------------------------------------------------------------
+4. 🌟 EMA ALTIN HAÇ (EMA21 / EMA50)
+----------------------------------------------------------------
+NE YAPAR:
+  Orta vadeli (21 günlük) EMA, uzun vadeli (50 günlük) EMA'yı
+  aşağıdan yukarı kestiğinde tespit eder. Klasik "Altın Haç"
+  formasyonu — orta vadeli trend dönüşünün en güvenilir
+  göstergelerinden biri.
+
+KOŞULLAR:
+  - Önceki mumda EMA21 <= EMA50 (altında veya eşit)
+  - Son mumda EMA21 > EMA50 (üstüne geçti — taze kesişim)
+  - Fiyat, EMA21'in üzerinde
+  - RSI 45 ile 72 arasında
+  - Hacim, 20 günlük ortalama hacmin en az 1 katı
+  - Confluence skoru en az 2/5
+
+GÜÇLÜ SİNYAL:
+  Hacim 1.5x+ VE RSI 52 üzerindeyse → Güçlü
+  Aksi halde → Orta
+
+MANTIK:
+  EMA9/21 kesişimi kısa vadeli bir sinyaldir ve gürültülü
+  olabilir. EMA21/50 kesişimi çok daha yavaş gerçekleşir ve
+  orta-uzun vadeli trend değişikliğini temsil eder. Bu sinyal
+  nadir gelir ama geldiğinde büyük hareketlerin başına işaret
+  eder. "Ölüm Haçı" ise tam tersi (EMA21 aşağı kesiyor) olup
+  bu uygulama yalnızca boğa yönünde (yukarı kesişim) arar.
+
+NE ZAMAN TETİKLENİR:
+  Seyrek — önemli trend dönüşlerinde.
+
+
+----------------------------------------------------------------
+5. 🔻 BOLLİNGER DİP ZIPLAMASI
+----------------------------------------------------------------
+NE YAPAR:
+  Fiyat Bollinger alt bandına değdikten sonra yukarı döndüğünde
+  ve bu dönüşü boğa mumu ile teyit ettiğinde tespit eder.
+
+KOŞULLAR:
+  - Önceki mumun düşük seviyesi (low) Bollinger alt bandında
+    veya altında olmalı (alt banda dokunmuş)
+  - Son mumun kapanışı Bollinger alt bandının üzerinde olmalı
+    (bandın dışına çıkmadı, içine döndü)
+  - RSI 38'in altında (aşırı satım bölgesi)
+  - Son mum "boğa mumu": kapanış, günün yüksek-düşük aralığının
+    üst yarısında (yani güçlü kapanış)
+  - Confluence skoru en az 2/5
+
+GÜÇLÜ SİNYAL:
+  RSI 30'un altındaysa → Güçlü (çok derin aşırı satım)
+  Aksi halde → Orta
+
+MANTIK:
+  Bollinger alt bandı istatistiksel olarak fiyatın normalden
+  çok uzaklaştığını gösterir. Alt banda dokunmak tek başına
+  alım sinyali değildir — fiyat sürtünebilir. Kritik olan,
+  dokunuşun ardından güçlü bir boğa mumunun oluşması (üst
+  yarıda kapanış) ve RSI'nın da aşırı satım bölgesinde olmasıdır.
+  Bu üçü aynı anda gerçekleştiğinde dip dönüşü olasılığı artar.
+
+NE ZAMAN TETİKLENİR:
+  Orta sıklıkta — sert düşüşlerin ardından.
+
+
+----------------------------------------------------------------
+6. 💥 SIKIŞMA PATLAMASI
+----------------------------------------------------------------
+NE YAPAR:
+  Uzun süre düşük volatilite (sıkışma/konsolidasyon) yaşayan
+  bir hissenin aniden yukarı yönde patladığını tespit eder.
+  Düşük volatiliteden yüksek volatiliteye geçiş anını yakalar.
+
+KOŞULLAR:
+  - Son 20 mumun ATR (Average True Range / Ortalama Gerçek Aralık)
+    değeri, son 40 mumun ATR değerinin %65'inden düşük olmalı
+    (yani hisse normalden %35+ daha dar hareket ediyor — sıkışma)
+  - Fiyat, Bollinger orta bandını (20 günlük SMA) yukarı kırmış
+  - Son mum boğa mumu: kapanış > açılış
+  - Hacim, 20 günlük ortalamanın 1.2 katından fazla
+  - RSI 45 ile 68 arasında
+  - Confluence skoru en az 2/5
+
+GÜÇLÜ SİNYAL:
+  Hacim 2x+ → Güçlü
+  Aksi halde → Orta
+
+MANTIK:
+  Piyasalar "nefes alır" — yüksek volatilite dönemlerinin
+  ardından düşük volatilite (sıkışma) gelir ve bu sıkışmanın
+  ardından yeniden büyük bir hareket başlar. Bu strateji
+  ATR'nin normalin çok altına düştüğü anları (yay gibi gerilme)
+  tespit eder ve fiyat Bollinger orta bandını geçtiğinde (yayın
+  bırakılması) alarm verir.
+
+NE ZAMAN TETİKLENİR:
+  Seyrek — uzun konsolidasyon sonrası kırılmalarda.
+
+
+----------------------------------------------------------------
+7. 🔀 RSI BOĞA DİVERJANSI
+----------------------------------------------------------------
+NE YAPAR:
+  Fiyat daha düşük bir dip yaparken RSI göstergesinin daha yüksek
+  bir dip yapmasını (gizli güç) tespit eder. Teknik analizin en
+  güçlü ters-sinyal kalıplarından biridir.
+
+KOŞULLAR:
+  - Son 35–50 mum içinde iki ayrı dip noktası belirlenir
+  - İkinci (yakın) dip, birinci (uzak) dipten daha düşük olmalı
+    (fiyat yeni dip yaptı — zayıflık görünümü)
+  - Yakın dipte hesaplanan RSI, uzak dipten en az 5 puan yüksek
+    olmalı (RSI aynı anda yükseliyor — gizli güç)
+  - Yakın dipin RSI değeri 52'nin altında (zaten yüksek değilse)
+  - Mevcut fiyat, yakın dipten en fazla %5 yukarıda (dip yakın)
+  - Min. 50 mum verisi gerekli
+
+GÜÇLÜ SİNYAL:
+  RSI farkı 12 puan veya daha fazlaysa → Güçlü
+  5–11 puan arasıysa → Orta
+
+MANTIK:
+  Fiyat aşağı giderken RSI'nın aşağı gitmemesi, satış baskısının
+  "yorulduğunu" ve alıcıların giderek güçlendiğini gösterir.
+  Bu bir "gizli güç" sinyalidir. Genellikle düşüşün sonunda
+  ortaya çıkar ve trend dönüşünden önce gelir. Hesaplama yoğun
+  olduğu için en az 50 mum veri gerektirir.
+
+NE ZAMAN TETİKLENİR:
+  Seyrek — güvenilirliği yüksek, kaliteli sinyal.
+
+
+----------------------------------------------------------------
+8. 📊 EMA HİZALANMASI (MA Stack)
+----------------------------------------------------------------
+NE YAPAR:
+  Üç EMA'nın mükemmel boğa hizalamasında olduğunu (EMA9 > EMA21
+  > EMA50) ve fiyatın bu üçlünün de üzerinde hareket ettiğini
+  tespit eder. Güçlü trend devamı sinyali.
+
+KOŞULLAR:
+  - EMA9 > EMA21 > EMA50 (üçlü hizalama)
+  - Fiyat, EMA9'un üzerinde
+  - RSI 50 ile 72 arasında (momentum bölgesinde)
+  - Hacim, ortalamanın en az 0.8 katı
+  - EMA9'un değeri bir önceki muma göre yükseliyor (ivme var)
+
+GÜÇLÜ SİNYAL:
+  Taze bir kesişim var (EMA21 az önce EMA50'yi geçti) VEYA
+  (Hacim 2x+ VE RSI 55+) → Güçlü
+  Aksi halde → Orta
+
+MANTIK:
+  EMA9 > EMA21 > EMA50 hizalaması "mükemmel boğa dizilimi"
+  olarak bilinir. Kısa, orta ve uzun vadeli trendlerin hepsi
+  aynı yönde (yukarı) olduğunu gösterir. Fiyatın bu üçlünün
+  de üzerinde olması, trendin aktif olduğunu teyit eder.
+  Bu durum sürdürülebilir yükselişlerin karakteristik yapısıdır.
+
+NE ZAMAN TETİKLENİR:
+  Orta sıklıkta — yükselen trendlerin ortasında.
+
+
+----------------------------------------------------------------
+9. 🎯 KIRILMA GERİ TESTİ
+----------------------------------------------------------------
+NE YAPAR:
+  Bir direnç seviyesi kırıldıktan sonra fiyatın o seviyeye geri
+  gelip "destek" olarak test ettiğini ve bu destek bölgesinden
+  yukarı döndüğünü tespit eder. Teknik analizin en güvenilir
+  giriş kalıplarından biridir.
+
+KOŞULLAR (3 aşama):
+  AŞAMA 1 — Kırılma:
+    Son 10–25 mum arasındaki direnç seviyesi belirlenir.
+    Son 10 mumda bu seviyenin %0.2+ üzerinde en az bir kapanış
+    olmuş olmalı (kırılma gerçekleşti)
+
+  AŞAMA 2 — Geri Test:
+    Mevcut fiyat, kırılan direncin %1.5 altı ile %2.5 üstü
+    arasında (±bant) olmalı (geri test bölgesinde)
+    Son mumun hacmi, ortalama hacmin 1.5 katından az olmalı
+    (sağlıklı konsolidasyon — düşük hacimli geri çekilme)
+
+  AŞAMA 3 — Dönüş Onayı:
+    Son mum boğa mumu: kapanış > açılış
+    RSI 45 ile 65 arasında
+    Confluence skoru en az 2/5
+
+GÜÇLÜ SİNYAL:
+  Orijinal kırılmada yüksek hacim vardı (1.8x+) VE
+  fiyat EMA50 üzerindeyse → Güçlü
+
+MANTIK:
+  "Direnç kırılır, destek olur." Bu teknik analizin temel
+  prensibidir. Ancak kırılma anında girmek risklidir — sahte
+  kırılmalar olabilir. En ideal giriş, kırılmanın ardından
+  fiyatın eski direnç seviyesine geri gelmesi (geri test) ve
+  bu seviyenin artık destek gibi davranmasıdır. Düşük hacimli
+  geri çekilme + boğa mumu dönüşü bu senaryonun teyididir.
+
+NE ZAMAN TETİKLENİR:
+  Seyrek — en kaliteli kurulumlardan biri.
+
+
+----------------------------------------------------------------
+10. ↩️ TREND DESTEĞİ
+----------------------------------------------------------------
+NE YAPAR:
+  Yükselen bir trendde fiyatın EMA21 veya EMA50 destek
+  seviyelerine çekildiğini ve boğa mumu ile bu destek
+  bölgesinden döndüğünü tespit eder. Trend takipçileri için
+  en doğal giriş noktası.
+
+KOŞULLAR:
+  - Yükselen trend: EMA9 > EMA21 > EMA50 (üçlü hizalama)
+  - Fiyat şu an EMA21'in ±1.5% bandında VEYA EMA50'nin
+    ±1.5% bandında (desteğe çekilme)
+  - Son mum boğa mumu: kapanış > açılış, mum gövdesi fiyatın
+    en az %0.3'ü kadar (gerçek bir dönüş mumu, pin değil)
+  - Hacim, ortalamanın en az 0.8 katı
+  - RSI 38 ile 60 arasında
+
+GÜÇLÜ SİNYAL:
+  EMA50'ye dokunuş (daha derin çekilme) VE Hacim 1.3x+ VE
+  RSI 42+ → Güçlü
+  EMA21'e dokunuşta → Orta
+
+MANTIK:
+  Yükselen bir trende "nereden girilir?" sorusunun en iyi
+  cevabı: EMA'lara çekilme anında. Trend devam ederken her
+  EMA desteği potansiyel alım noktasıdır. EMA50'ye çekilme
+  daha derin ve dolayısıyla daha önemli bir çekilmedir —
+  bu yüzden güçlü sinyal sayılır. Boğa mumu şartı, desteğin
+  tuttuğunu ve alıcıların sahaya çıktığını teyit eder.
+
+NE ZAMAN TETİKLENİR:
+  Orta sıklıkta — trend içi çekilmelerde.
+
+
+----------------------------------------------------------------
+11. 🧠 AKILLI MOMENTUM
+----------------------------------------------------------------
+NE YAPAR:
+  5 tamamen bağımsız teknik sistemin hepsinin aynı anda
+  boğa sinyali vermesini bekler. Hiçbir şeyden ödün vermez —
+  tüm koşullar eksiksiz sağlanmadan sinyal üretmez.
+
+KOŞULLAR (5 koşulun TAMAMI gerekli):
+  C1 — SuperTrend (2.0 çarpan, 14 periyot) → boğa yönünde
+       (fiyat üst bandın üzerinde seyrediyor)
+
+  C2 — EMA Hizalanması → EMA9 > EMA21 > EMA50
+       (üç zaman dilimi de yukarı yönde)
+
+  C3 — RSI 52 ile 68 arasında
+       (ne aşırı satım ne aşırı alım — saf momentum bölgesi)
+
+  C4 — MACD çizgisi > 0 VE MACD histogramı > 0
+       (hem sıfır çizgisi üstünde hem de ivme pozitif)
+
+  C5 — Hacim, 20 günlük ortalamanın 1.2 katından fazla
+       (para girişi var)
+
+  NOT: 4 koşul yeterli değil. Tam 5 olmalı.
+
+GÜÇLÜ SİNYAL:
+  (SuperTrend az önce ayıdan boğaya döndü VEYA
+   EMA9 bir önceki mumdan daha yüksek)
+  VE hacim 1.5x+ ise → Güçlü
+  Aksi halde → Orta
+
+MANTIK:
+  Bu strateji "tüm sistemler aynı fikirde" ilkesine dayanır.
+  SuperTrend, EMA dizilimi, RSI, MACD ve hacim — bunlar birbirinden
+  bağımsız 5 farklı yaklaşım (trend takip, momentum, aşırı alım/satım,
+  ivme, hacim analizi). Her biri farklı matematiksel hesaplamayla
+  çalışır. Hepsinin aynı anda "al" demesi rastlantı değildir —
+  hissenin gerçekten güçlü bir konumda olduğunu gösterir.
+  Sinyaller seyrek gelir ama geldiğinde yüksek kaliteli olur.
+
+NE ZAMAN TETİKLENİR:
+  Seyrek — en seçici strateji. Büyük hareketlerin başını
+  yakalamak için tasarlanmıştır.
+
+
+================================================================
+CONFLUENCE SKORU NEDİR?
+================================================================
+Her strateji değerlendirilirken 0-5 arası bir "Confluence
+(Doğrulama) Skoru" hesaplanır. Bu skor, sinyalin kalitesini
+ölçen bağımsız bir filtredir:
+
+  +1 puan: RSI 40 ile 68 arasında (sağlıklı aralık)
+  +1 puan: Fiyat EMA50 üzerinde (ana trend yukarı)
+  +1 puan: MACD histogramı pozitif (ivme var)
+  +1 puan: Hacim, ortalama hacmin üzerinde
+  +1 puan: Fiyat 10 günlük SMA üzerinde (kısa vadeli trend yukarı)
+
+Çoğu strateji en az 2/5 puan şartı arar. Bu, sinyalin
+birden fazla bağımsız faktörle desteklendiğini garanti eder.
+
+
+================================================================
+RSI HESAPLAMA YÖNTEMİ
+================================================================
+Bu uygulama RSI'ı Wilder'ın Üstel Yumuşatma (Exponential
+Smoothing) yöntemiyle hesaplar:
+
+  - İlk 14 periyot için basit ortalama hesaplanır
+  - Sonraki her periyot için:
+    Ort. Kazanç = (Önceki Ort. Kazanç × 13 + Güncel Kazanç) / 14
+    Ort. Kayıp  = (Önceki Ort. Kayıp  × 13 + Güncel Kayıp ) / 14
+  - RS = Ort. Kazanç / Ort. Kayıp
+  - RSI = 100 - (100 / (1 + RS))
+
+Bu yöntem, basit ortalamaya göre daha yumuşak ve gecikme daha
+az olan sonuçlar üretir. TradingView, Bloomberg ve profesyonel
+platformların kullandığı standart RSI yöntemidir.
+
+
+================================================================
+SİNYAL GÜCÜ TANIMLARI
+================================================================
+  GÜÇLÜ  — Birden fazla ekstra teyit koşulu sağlandı.
+            Yüksek olasılıklı kurulum.
+
+  ORTA   — Temel koşulların tamamı sağlandı ama ek teyit yok.
+            Standart kalitede sinyal.
+
+  ZAYIF  — (Bu uygulama şu an zayıf sinyal üretmiyor.
+            Tüm sinyaller en az Orta seviyede.)
+
+
+================================================================
+ÖNEMLİ UYARI
+================================================================
+Bu uygulama yatırım tavsiyesi değildir. Üretilen sinyaller
+teknik analiz algoritmalarının sonucudur ve geçmiş fiyat
+hareketlerine dayanır. Geçmişteki performans gelecekteki
+sonuçları garanti etmez. Tüm yatırım kararları kullanıcının
+kendi sorumluluğundadır.
+
+================================================================
