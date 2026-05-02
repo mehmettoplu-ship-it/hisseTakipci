@@ -3,8 +3,9 @@ import Foundation
 actor StockListService {
     static let shared = StockListService()
 
-    private let cacheKey     = "dynamicStockList"
-    private let cacheDateKey = "dynamicStockListDate"
+    // v2: hisse listesi 220→329 olduğunda eski cache otomatik geçersiz kalır
+    private let cacheKey     = "dynamicStockList_v2"
+    private let cacheDateKey = "dynamicStockListDate_v2"
     private let cacheTTL: TimeInterval = 24 * 3600
 
     private let session: URLSession = {
