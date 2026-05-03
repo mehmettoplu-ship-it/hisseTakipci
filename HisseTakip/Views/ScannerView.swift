@@ -308,6 +308,7 @@ struct ScannerView: View {
         case .smartMomentum:      return Color(red: 1.0,  green: 0.85, blue: 0.15)
         case .candlePattern:      return Color(red: 0.4,  green: 0.8,  blue: 1.0)
         case .weeklyBreakout:     return Color(red: 0.1,  green: 0.85, blue: 0.55)
+        case .vcpBreakout:        return Color(red: 0.85, green: 0.7,  blue: 0.1)
         }
     }
 
@@ -400,6 +401,7 @@ struct ScannerView: View {
         case .smartMomentum:      return "Akıllı\nMoment."
         case .candlePattern:      return "Mum\nFormas."
         case .weeklyBreakout:     return "52H\nZirve"
+        case .vcpBreakout:        return "VCP\nKırılma"
         }
     }
 }
