@@ -21,16 +21,19 @@ actor FinancialDataService {
     // MARK: - Ana Metot
 
     func fetchQuarterlyStatements(symbol: String) async throws -> [QuarterlyStatement] {
-        let periods = recentQuarters(count: 4)
+        let allPeriods  = recentQuarters(count: 5)
+        let mainPeriods = Array(allPeriods.prefix(4))
+        let yoyPeriod   = allPeriods[4]     // Aynı çeyreğin bir yıl öncesi (YoY için)
 
         // XI_29: Standart TMS (çoğu sanayi/ticaret şirketi)
         // UFRS:  TFRS konsolide (büyük şirketler, holdingler)
         // UFRS_K: Bankalar ve sigorta şirketleri
         for group in ["XI_29", "UFRS", "UFRS_K"] {
-            if let stmts = try? await fetch(symbol: symbol, periods: periods, group: group),
-               !stmts.isEmpty {
-                return stmts
-            }
+            guard let stmts = try? await fetch(symbol: symbol, periods: mainPeriods, group: group),
+                  !stmts.isEmpty else { continue }
+            // YoY çeyreği ayrı istekle çek — API max 4 dönem destekliyor
+            let yoyStmts = try? await fetch(symbol: symbol, periods: [yoyPeriod], group: group)
+            return stmts + (yoyStmts ?? [])
         }
         return []
     }

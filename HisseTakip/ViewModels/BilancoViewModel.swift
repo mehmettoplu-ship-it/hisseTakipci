@@ -221,11 +221,13 @@ final class BilancoViewModel: ObservableObject {
             sigs.append(sig(.operatingLeverage))
         }
 
-        // 9. İstikrarlı Kâr — 4 çeyrek kârlı ve yıllık net kâr %10+ büyüme
+        // 9. İstikrarlı Kâr — 4 çeyrek kârlı + çeyreklik büyüme veya YoY büyüme
         if let q2v = q2, let q3v = q3,
-           q0.isProfit, q1.isProfit, q2v.isProfit, q3v.isProfit,
-           let yoy = yoyNI, yoy > 10 {
-            sigs.append(sig(.profitConsistency))
+           q0.isProfit, q1.isProfit, q2v.isProfit, q3v.isProfit {
+            let qualifies = niChange > 10 || (yoyNI ?? 0) > 10
+            if qualifies {
+                sigs.append(sig(.profitConsistency))
+            }
         }
 
         return sigs

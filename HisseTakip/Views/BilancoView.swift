@@ -1,9 +1,20 @@
 import SwiftUI
+import UIKit
 
 struct BilancoView: View {
     @EnvironmentObject private var scanner: ScannerViewModel
     @StateObject private var vm = BilancoViewModel()
     @State private var filterType: FinancialSignalType?
+
+    private func openIsyatirim(symbol: String) {
+        let url = URL(string: "https://www.isyatirim.com.tr/tr-tr/analiz/hisse/Sayfalar/sirket-karti.aspx?hisse=\(symbol)")!
+        UIApplication.shared.open(url)
+    }
+
+    private func openKAP(symbol: String) {
+        let url = URL(string: "https://www.kap.org.tr/tr/Bildirim/search?text=\(symbol)&type=FR")!
+        UIApplication.shared.open(url)
+    }
 
     private var filtered: [FinancialSignal] {
         guard let f = filterType else { return vm.signals }
@@ -175,7 +186,7 @@ struct BilancoView: View {
                     if vm.fetchErrors > 0 && vm.dataFoundCount == 0 {
                         Text("Veri Alınamadı")
                             .font(.title3.weight(.bold))
-                        Text("Yahoo Finance'e bağlanılamadı veya kimlik\ndoğrulaması başarısız oldu")
+                        Text("İş Yatırım sunucusuna bağlanılamadı veya\nveri formatı beklenenden farklı")
                             .font(.subheadline).foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                         Text("Hata: \(vm.fetchErrors) / \(vm.totalCount) hisse")
@@ -190,7 +201,7 @@ struct BilancoView: View {
                     } else {
                         Text("Bilanço Verisi Yok")
                             .font(.title3.weight(.bold))
-                        Text("Yahoo Finance'de BIST bilanço verisi bulunamadı")
+                        Text("İş Yatırım'dan bilanço verisi alınamadı.\nBiraz sonra tekrar deneyin.")
                             .font(.subheadline).foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                     }
@@ -228,6 +239,26 @@ struct BilancoView: View {
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
                 .listRowInsets(.init(top: 6, leading: 14, bottom: 6, trailing: 14))
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button { openIsyatirim(symbol: sig.stock.symbol) } label: {
+                        Label("İş Yatırım", systemImage: "building.columns.fill")
+                    }
+                    .tint(Color(red: 0.1, green: 0.6, blue: 0.35))
+                    Button { openKAP(symbol: sig.stock.symbol) } label: {
+                        Label("KAP", systemImage: "doc.text.fill")
+                    }
+                    .tint(Color(red: 0.15, green: 0.4, blue: 0.85))
+                }
+                .swipeActions(edge: .trailing) {
+                    Button {
+                        FavoritesManager.shared.toggle(sig.stock)
+                    } label: {
+                        let isFav = FavoritesManager.shared.isFavorite(sig.stock)
+                        Label(isFav ? "Favoriden Çıkar" : "Favoriye Ekle",
+                              systemImage: isFav ? "star.slash" : "star.fill")
+                    }
+                    .tint(Color(red: 1.0, green: 0.65, blue: 0.0))
+                }
             }
         }
         .listStyle(.plain)
