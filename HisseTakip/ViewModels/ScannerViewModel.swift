@@ -111,13 +111,15 @@ final class ScannerViewModel: ObservableObject {
                 for (stock, timeframe) in chunk {
                     group.addTask {
                         guard !Task.isCancelled else { return [] }
-                        if let candles = try? await YahooFinanceService.shared
-                            .fetchCandles(symbol: stock.id, timeframe: timeframe) {
+                        do {
+                            let candles = try await YahooFinanceService.shared
+                                .fetchCandles(symbol: stock.id, timeframe: timeframe)
                             return StrategyScanner.scan(
                                 stock: stock, candles: candles,
                                 timeframe: timeframe, enabledStrategies: strategies)
+                        } catch {
+                            return []
                         }
-                        return []
                     }
                 }
                 for await partialSignals in group {
@@ -178,14 +180,20 @@ final class ScannerViewModel: ObservableObject {
                 for (stock, timeframe) in chunk {
                     group.addTask {
                         guard !Task.isCancelled else { return ([], false) }
-                        if let candles = try? await YahooFinanceService.shared
-                            .fetchCandles(symbol: stock.id, timeframe: timeframe) {
+                        do {
+                            let candles = try await YahooFinanceService.shared
+                                .fetchCandles(symbol: stock.id, timeframe: timeframe)
                             let sigs = StrategyScanner.scan(
                                 stock: stock, candles: candles,
                                 timeframe: timeframe, enabledStrategies: strategies)
                             return (sigs, false)
+                        } catch FetchError.noData {
+                            // Hisse Yahoo Finance'te yok — hata sayılmaz
+                            return ([], false)
+                        } catch {
+                            // Gerçek hata: timeout, rate limit, ağ problemi
+                            return ([], true)
                         }
-                        return ([], true)
                     }
                 }
                 for await (partialSignals, hadError) in group {
