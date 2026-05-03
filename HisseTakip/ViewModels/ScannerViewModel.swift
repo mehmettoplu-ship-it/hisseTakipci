@@ -9,7 +9,7 @@ final class ScannerViewModel: ObservableObject {
     @Published var scannedCount: Int     = 0
     @Published var lastScanDate: Date?
     @Published var errorMessage: String?
-    @Published var selectedTimeframes: Set<Timeframe> = Set(Timeframe.allCases)
+    @Published var selectedTimeframes: Set<Timeframe> = [.daily]
     @Published var stockList: [Stock]    = BISTStockList.all
     @Published var currentSymbol: String? = nil
     @Published var fetchErrors: Int      = 0

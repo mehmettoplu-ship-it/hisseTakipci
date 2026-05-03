@@ -360,8 +360,11 @@ enum StrategyScanner {
         // Bir yıllık en yüksek seviyeyi hacim onaylı kıran hisseler
         // Kurumsal yatırımcıların izlediği Stage 2 kırılma kalıbı
         // ─────────────────────────────────────────────────────────────────
-        if enabledStrategies.contains(.weeklyBreakout), candles.count >= 200 {
-            let yearHigh = candles.suffix(251).dropLast().map(\.high).max() ?? 0
+        let weeklyBreakoutMin = timeframe == .weekly ? 54 : 200
+        if enabledStrategies.contains(.weeklyBreakout), candles.count >= weeklyBreakoutMin {
+            // Günlük: 251 gün ≈ 1 yıl | Haftalık: 53 hafta ≈ 1 yıl
+            let lookback = timeframe == .weekly ? 53 : 251
+            let yearHigh = candles.suffix(lookback).dropLast().map(\.high).max() ?? 0
             if yearHigh > 0,
                price > yearHigh * 1.002,
                lastCandle.volume > ind.avgVolume20 * 1.5,
