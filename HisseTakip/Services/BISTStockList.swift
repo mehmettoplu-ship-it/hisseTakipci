@@ -220,7 +220,6 @@ enum BISTStockList {
         Stock(id: "BEGYO.IS", symbol: "BEGYO", name: "Bati Ege Gayrimenkul Yatirim", sector: "GYO"),
         Stock(id: "DAPGM.IS", symbol: "DAPGM", name: "Dap", sector: "GYO"),
         Stock(id: "DGGYO.IS", symbol: "DGGYO", name: "Doğuş Gayrimenkul GYO", sector: "GYO"),
-        Stock(id: "DMLKT.IS", symbol: "DMLKT", name: "Emlak Konut Gayrimenkul Yatirim", sector: "GYO"),
         Stock(id: "DZGYO.IS", symbol: "DZGYO", name: "Deniz Gayrimenkul GYO", sector: "GYO"),
         Stock(id: "EDIP.IS", symbol: "EDIP", name: "Edip GYO", sector: "GYO"),
         Stock(id: "EGEGY.IS", symbol: "EGEGY", name: "Egeyapi Avrupa Gayrimenkul Yatirim", sector: "GYO"),

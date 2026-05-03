@@ -380,6 +380,37 @@ enum StrategyScanner {
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // 14. VCP KIRILMASI (Volatility Contraction Pattern)
+        // Sıkışma + hacim kuruması + 3x patlama — Minervini metodolojisi
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.vcpBreakout), candles.count >= 30 {
+            let shortATR = TechnicalAnalysis.atrArray(candles: Array(candles.suffix(20)), period: 10).last ?? 0
+            let baseATR  = TechnicalAnalysis.atrArray(candles: Array(candles.suffix(40)), period: 20).last ?? 0
+            let atrContracted = baseATR > 0 && shortATR < baseATR * 0.65
+
+            let recent5AvgVol = candles.suffix(6).dropLast().map(\.volume).reduce(0, +) / 5
+            let volumeDriedUp = recent5AvgVol < ind.avgVolume20 * 0.70
+
+            let prior20High = candles.suffix(21).dropLast().map(\.high).max() ?? 0
+            let breakingOut = price > prior20High * 1.002
+
+            let explosionVol = lastCandle.volume > ind.avgVolume20 * 3.0
+            let inUptrend    = price > ind.ema21 && price > ind.ema50
+            let rsiOk        = ind.rsi > 52 && ind.rsi < 75
+            let macdOk       = ind.macdHistogram > 0
+
+            if atrContracted && volumeDriedUp && breakingOut && explosionVol
+               && inUptrend && rsiOk && macdOk && confluence >= 3 {
+                signals.append(make(
+                    stock: stock, type: .vcpBreakout,
+                    strength: volRatio >= 4.0 && ind.rsi > 62 ? .strong : .moderate,
+                    timeframe: timeframe, price: price, ind: ind,
+                    volRatio: volRatio, dailyChange: dailyChange
+                ))
+            }
+        }
+
         return signals
     }
 

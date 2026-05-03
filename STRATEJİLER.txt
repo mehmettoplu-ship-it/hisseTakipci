@@ -1,7 +1,7 @@
 ================================================================
         HİSSE TAKİP — TARAMA STRATEJİLERİ KILAVUZU
 ================================================================
-Toplam Strateji: 13
+Toplam Strateji: 14
 Güncelleme: Mayıs 2026
 ================================================================
 
@@ -464,6 +464,74 @@ NE ZAMAN TETİKLENİR:
   Seyrek — yalnızca gerçek kırılma anlarında.
   Günlük periyotta 250 mum verisi gerektiği için diğer
   periyotlarda tetiklenmez.
+
+
+----------------------------------------------------------------
+14. 💎 VCP KIRILMASI (Volatility Contraction Pattern)
+----------------------------------------------------------------
+NE YAPAR:
+  Mark Minervini'nin VCP (Volatilite Daralması Kalıbı) metodolojisini
+  uygular. Hissenin önce volatilitesini ve hacmini kuruttuktan sonra
+  patlayıcı bir kırılma yapmasını bekler. En nadir ama en kaliteli
+  sinyal türüdür.
+
+KOŞULLAR (7 koşulun TAMAMI gerekli):
+  C1 — ATR Daralması: Son 10 mumun ATR'ı, son 20 mumun ATR'ının
+       %65'inden düşük (sıkışma/daralma gerçekleşmiş olmalı)
+
+  C2 — Hacim Kuruması: Son 5 mumun ortalama hacmi,
+       20 günlük ortalama hacmin %70'inden az
+       (büyük oyuncular beklemede, satış baskısı kalmamış)
+
+  C3 — 20 Günlük Zirve Kırılması: Fiyat, önceki 20 mumun
+       en yüksek seviyesinin %0.2+ üzerine çıkmış
+       (sıkışmadan patlama)
+
+  C4 — Hacim Patlaması: Kırılma anındaki hacim,
+       20 günlük ortalama hacmin 3 katından fazla (3x+)
+       (kurumsal para girişi zorunlu)
+
+  C5 — Trend Konumu: Fiyat hem EMA21 hem EMA50 üzerinde
+       (uzun vadeli yükseliş trendi içinde olmalı)
+
+  C6 — RSI 52 ile 75 arasında
+       (güçlü momentum, aşırı alım değil)
+
+  C7 — MACD Histogramı pozitif (ivme yukarı yönde)
+
+  NOT: Ayrıca confluence skoru en az 3/5 olmalı.
+       7 koşul + 3 confluence — en yüksek filtre eşiği.
+
+GÜÇLÜ SİNYAL:
+  Hacim 4x+ VE RSI 62+ → Güçlü
+  Hacim 3–4x arasında → Orta
+
+MANTIK:
+  VCP kalıbı şu fikre dayanır: Gerçek bir patlama öncesinde
+  hisse "enerji depolar." Volatilite giderek azalır (ATR daralır),
+  hacim kurur (büyük satıcılar çekilir), fiyat dar bir bant içinde
+  sıkışır. Bu daralma birden patlamaya dönüştüğünde ve buna
+  kurumsal hacim eşlik ettiğinde, kurulum son derece güçlüdür.
+
+  Bu yüzden strateji üç aşama ister:
+    1. SIKILMA — ATR daralması + hacim kuruması (enerji birikiyor)
+    2. KIRILMA — 20 günlük zirveden yukarı çıkış (fiyat hareketi)
+    3. PATLAMA — 3x+ hacim (kurumsal onay, sahte kırılma değil)
+
+  Mark Minervini bu kalıbı SuperPerformance Stocks kitabında
+  detaylı anlatır ve 7 kez ABD şampiyonu olduğu stratejinin
+  temelini oluşturduğunu söyler. Borsada en büyük hareketlerin
+  büyük çoğunluğu bu kurulumdan önce bu kalıbı gösterir.
+
+  Neden bu kadar az tetiklenir? Çünkü 7 farklı koşulun aynı
+  anda sağlanması gerçekten nadirdir — ve bu bir bug değil,
+  bir özellik. Gelen her sinyal yüksek olasılıklı kurulumu
+  temsil eder.
+
+NE ZAMAN TETİKLENİR:
+  Çok Seyrek — tüm stratejiler içinde en seçici olanı.
+  Doğru kurulum oluşana kadar haftalarca hiç sinyal gelmeyebilir.
+  Bu beklenti normaldir, sinyelin kalitesinin göstergesidir.
 
 
 ================================================================

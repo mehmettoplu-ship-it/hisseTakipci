@@ -15,6 +15,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
     case smartMomentum      = "Akıllı Momentum"
     case candlePattern      = "Mum Formasyonu"
     case weeklyBreakout     = "52 Hafta Zirvesi"
+    case vcpBreakout        = "VCP Kırılması"
 
     var emoji: String {
         switch self {
@@ -31,6 +32,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .smartMomentum:      return "🧠"
         case .candlePattern:      return "🕯️"
         case .weeklyBreakout:     return "📈"
+        case .vcpBreakout:        return "💎"
         }
     }
 
@@ -49,6 +51,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .smartMomentum:      return "strategy_smartMomentum"
         case .candlePattern:      return "strategy_candlePattern"
         case .weeklyBreakout:     return "strategy_weeklyBreakout"
+        case .vcpBreakout:        return "strategy_vcpBreakout"
         }
     }
 }
@@ -72,6 +75,7 @@ extension SignalType {
         case .smartMomentum:      return "5 bağımsız sistemin hepsinin aynı anda boğa sinyali verdiği anları yakalar. En seçici strateji."
         case .candlePattern:      return "Destek bölgesinde oluşan Hammer (Çekiç) veya Bullish Engulfing (Boğa Yutma) formasyonunu tespit eder."
         case .weeklyBreakout:     return "52 haftalık (1 yıllık) en yüksek seviyeyi hacim onayıyla kıran hisseleri tespit eder. Kurumsal yatırımcıların en çok izlediği direnç seviyesi."
+        case .vcpBreakout:        return "Sıkışma + hacim kuruması + patlama: Minervini'nin VCP (Volatility Contraction Pattern) stratejisi. En kaliteli, en nadir sinyal."
         }
     }
 
@@ -148,6 +152,14 @@ extension SignalType {
                     "RSI 55–78 arasında (güçlü momentum, aşırı alım yok)",
                     "Fiyat EMA21 ve EMA50 üzerinde (ana trend yukarı)",
                     "En az 250 mum veri gerekli"]
+        case .vcpBreakout:
+            return ["ATR sıkışması: kısa ATR, uzun ATR'nin %65'inden düşük",
+                    "Hacim kuruması: son 5 bar ort. hacim < genel ort. × 0.70",
+                    "Fiyat son 20 mumun en yüksek seviyesini kırdı (taze breakout)",
+                    "Patlama hacmi: bugünkü hacim > 20 günlük ort. × 3.0",
+                    "Fiyat EMA21 VE EMA50 üzerinde (sağlam uptrend)",
+                    "RSI 52–75 arası, MACD histogramı pozitif",
+                    "Confluence skoru ≥ 3/5 (diğer stratejilerden daha katı)"]
         }
     }
 
@@ -179,6 +191,8 @@ extension SignalType {
             return "Mum formasyonları fiyatın anlık hikayesini anlatır: alıcılar mı satıcılar mı galip geldi? Hammer'da uzun alt gölge 'satıcılar baskı yaptı ama alıcılar geri aldı' demektir. Bullish Engulfing'de büyük yeşil mumun kırmızıyı tamamen yutması ani güç değişimini gösterir. İkisi de destek bölgesinde gerçekleşirse anlam kazanır."
         case .weeklyBreakout:
             return "52 haftalık zirve yalnızca teknik bir seviye değil, psikolojik bir engel. Bir yıldır bu seviyenin üzerine çıkamayan hisse aniden büyük hacimle geçiyorsa kurumsal alıcılar devreye girmiş demektir. Mark Minervini ve IBD (Investor's Business Daily) bu formasyonu 'Stage 2 Breakout' olarak tanımlar ve tarihin en büyük rallilerinin büyük çoğunluğu bu kalıpla başlamıştır."
+        case .vcpBreakout:
+            return "Minervini'nin VCP metodolojisi: her sıkışma dönemi kurumların sessizce birikim yaptığı zamandır. Hacim kuruyorsa satıcılar tükeniyor demektir. Sıkışmanın ardından 3x+ hacimli patlama = akıllı para alımı. Bu kombinasyonun sinyali çok nadiren tetiklenir ama tetiklendiğinde harekete geçmeye değer."
         }
     }
 
@@ -197,6 +211,7 @@ extension SignalType {
         case .smartMomentum:      return "SuperTrend yeni döndü veya EMA9 hızlanıyor VE Hacim 1.5x+ → Güçlü."
         case .candlePattern:      return "Bullish Engulfing ve mum gövdesi önceki mumun 2x+ büyüklüğünde VE Hacim 1.5x+ → Güçlü. Hammer ve alt gölge > 3x gövde VE EMA50 yakınında → Güçlü."
         case .weeklyBreakout:     return "Hacim 2x+ VE RSI 60+ → Güçlü. 1.5–2x hacim ve RSI 55–60 → Orta."
+        case .vcpBreakout:        return "Hacim 4x+ VE RSI 62+ → Güçlü. 3–4x hacim arası → Orta."
         }
     }
 
@@ -215,6 +230,7 @@ extension SignalType {
         case .smartMomentum:      return "Seyrek"
         case .candlePattern:      return "Orta Sıklıkta"
         case .weeklyBreakout:     return "Seyrek"
+        case .vcpBreakout:        return "Çok Seyrek"
         }
     }
 }
