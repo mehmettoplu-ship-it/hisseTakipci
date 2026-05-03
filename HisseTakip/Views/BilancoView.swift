@@ -459,8 +459,23 @@ struct FinancialSignalCard: View {
     private var extraInfoRow: some View {
         switch signal.type {
 
+        case .turningProfitable:
+            HStack(spacing: 6) {
+                infoTag(
+                    text: "Önceki: \(formatMoney(signal.previousNetIncome))",
+                    color: Color(red: 1.0, green: 0.28, blue: 0.32))
+                infoTag(
+                    text: "→ \(formatMoney(signal.currentNetIncome))",
+                    color: Color(red: 0.1, green: 0.85, blue: 0.55))
+                if let yoy = signal.yoyNetIncomeChangePercent, yoy != 0 {
+                    infoTag(
+                        text: String(format: "YoY %+.0f%%", yoy),
+                        color: Color(red: 0.1, green: 0.85, blue: 0.55))
+                }
+                Spacer()
+            }
+
         case .approachingProfit:
-            // Net marj yüzdesi + iyileşme okunun gösterimi
             let marginPct = signal.currentNetMargin * 100
             let improvPct = signal.netMarginImprovement * 100
             HStack(spacing: 6) {
@@ -476,7 +491,6 @@ struct FinancialSignalCard: View {
             }
 
         case .consecutiveLossReduction:
-            // Kaç ardışık çeyrek iyileşme var
             HStack(spacing: 6) {
                 infoTag(
                     text: "\(signal.consecutiveImprovements + 1) çeyrek sürekli iyileşme",
@@ -497,6 +511,17 @@ struct FinancialSignalCard: View {
                 infoTag(
                     text: String(format: "FAVÖK Marjı: %.1f%%", ebitMargin),
                     color: Color(red: 0.6, green: 0.85, blue: 0.3))
+                Spacer()
+            }
+
+        case .lossReducing:
+            HStack(spacing: 6) {
+                infoTag(
+                    text: String(format: "%+.0f%% iyileşme", signal.netIncomeChangePercent),
+                    color: Color(red: 0.2, green: 0.6, blue: 1.0))
+                infoTag(
+                    text: String(format: "Marj: %.1f%%", signal.currentNetMargin * 100),
+                    color: Color(red: 0.2, green: 0.6, blue: 1.0))
                 Spacer()
             }
 
@@ -522,8 +547,31 @@ struct FinancialSignalCard: View {
                 Spacer()
             }
 
-        default:
-            EmptyView()
+        case .profitGrowing:
+            HStack(spacing: 6) {
+                infoTag(
+                    text: String(format: "Kâr %+.0f%%", signal.netIncomeChangePercent),
+                    color: Color(red: 1.0, green: 0.72, blue: 0.0))
+                if let yoy = signal.yoyNetIncomeChangePercent {
+                    infoTag(
+                        text: String(format: "YoY %+.0f%%", yoy),
+                        color: Color(red: 1.0, green: 0.72, blue: 0.0))
+                }
+                Spacer()
+            }
+
+        case .revenueGrowing:
+            HStack(spacing: 6) {
+                infoTag(
+                    text: String(format: "Gelir %+.0f%%", signal.revenueChangePercent),
+                    color: Color(red: 0.7, green: 0.3, blue: 1.0))
+                infoTag(
+                    text: "Net: \(formatMoney(signal.currentNetIncome))",
+                    color: signal.currentNetIncome >= 0
+                        ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                        : Color(red: 1.0, green: 0.28, blue: 0.32))
+                Spacer()
+            }
         }
     }
 

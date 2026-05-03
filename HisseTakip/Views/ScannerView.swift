@@ -251,11 +251,12 @@ struct ScannerView: View {
             spacing: 8
         ) {
             ForEach(sorted, id: \.key) { type, sigs in
+                let color = typeColor(type)
                 Button { selectedStrategy = type } label: {
                     VStack(spacing: 4) {
                         Text("\(sigs.count)")
                             .font(.system(size: 18, weight: .black, design: .rounded))
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(color)
                         Text(type.emoji)
                             .font(.system(size: 14))
                         Text(shortName(type))
@@ -268,15 +269,33 @@ struct ScannerView: View {
                     .padding(.vertical, 10)
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(Color(.secondarySystemBackground))
+                            .fill(color.opacity(0.08))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .strokeBorder(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.2), lineWidth: 1)
+                                    .strokeBorder(color.opacity(0.3), lineWidth: 1)
                             )
                     )
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    private func typeColor(_ type: SignalType) -> Color {
+        switch type {
+        case .resistanceBreakout: return Color(red: 0.2,  green: 0.5,  blue: 1.0)
+        case .oversoldReversal:   return Color(red: 0.1,  green: 0.85, blue: 0.55)
+        case .emaBullishCross:    return Color(red: 1.0,  green: 0.72, blue: 0.0)
+        case .goldenCross:        return Color(red: 1.0,  green: 0.82, blue: 0.1)
+        case .bollingerBounce:    return Color(red: 0.3,  green: 0.7,  blue: 1.0)
+        case .squeezeBounce:      return Color(red: 0.6,  green: 0.85, blue: 0.3)
+        case .rsiDivergence:      return Color(red: 0.7,  green: 0.3,  blue: 1.0)
+        case .maStack:            return Color(red: 0.0,  green: 0.75, blue: 0.85)
+        case .breakoutRetest:     return Color(red: 1.0,  green: 0.55, blue: 0.0)
+        case .trendPullback:      return Color(red: 0.95, green: 0.35, blue: 0.6)
+        case .smartMomentum:      return Color(red: 1.0,  green: 0.85, blue: 0.15)
+        case .candlePattern:      return Color(red: 0.4,  green: 0.8,  blue: 1.0)
+        case .weeklyBreakout:     return Color(red: 0.1,  green: 0.85, blue: 0.55)
         }
     }
 

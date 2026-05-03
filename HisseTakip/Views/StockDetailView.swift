@@ -166,17 +166,19 @@ struct StockDetailView: View {
                     if let prev = vm.candles.dropLast().last {
                         let change = (last.close - prev.close) / prev.close * 100
                         Text(String(format: "%+.2f%%", change))
-                            .font(.subheadline)
-                            .foregroundStyle(change >= 0 ? .green : .red)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(change >= 0
+                                ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                : Color(red: 1.0, green: 0.28, blue: 0.32))
                     }
                 }
             }
             Spacer()
             Text(stock.sector)
-                .font(.caption)
+                .font(.caption.weight(.medium))
                 .padding(.horizontal, 8).padding(.vertical, 4)
-                .background(Color.accentColor.opacity(0.2))
-                .foregroundStyle(Color.accentColor)
+                .background(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.15))
+                .foregroundStyle(Color(red: 0.2, green: 0.5, blue: 1.0))
                 .clipShape(Capsule())
         }
         .padding()
@@ -188,12 +190,26 @@ struct StockDetailView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(Timeframe.allCases) { tf in
+                    let selected = vm.selectedTimeframe == tf
                     Button(tf.displayName) { vm.switchTimeframe(tf) }
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(vm.selectedTimeframe == tf ? Color.accentColor : Color(.systemGray5))
-                        .foregroundStyle(vm.selectedTimeframe == tf ? .white : .primary)
+                        .font(.system(size: 13, weight: .bold))
+                        .padding(.horizontal, 14).padding(.vertical, 7)
+                        .background(
+                            selected
+                                ? LinearGradient(
+                                    colors: [Color(red: 0.2, green: 0.5, blue: 1.0),
+                                             Color(red: 0.1, green: 0.3, blue: 0.9)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing)
+                                : LinearGradient(
+                                    colors: [Color(.tertiarySystemFill), Color(.tertiarySystemFill)],
+                                    startPoint: .leading, endPoint: .trailing)
+                        )
+                        .foregroundStyle(selected ? .white : .secondary)
                         .clipShape(Capsule())
+                        .shadow(color: selected
+                            ? Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.35) : .clear,
+                                radius: 6, y: 3)
+                        .animation(.spring(response: 0.3), value: selected)
                 }
             }
             .padding(.horizontal)
@@ -283,10 +299,7 @@ struct StockDetailView: View {
             }
         }
         .padding(.vertical, 12)
-        .background(
-            RoundedRectangle(cornerRadius: 0)
-                .fill(Color(.systemGray6).opacity(0.5))
-        )
+        .background(Color(.systemGray6).opacity(0.5))
     }
 
     private func financialSignalBadge(_ sig: FinancialSignal) -> some View {

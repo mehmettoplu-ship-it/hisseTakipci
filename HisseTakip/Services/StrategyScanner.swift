@@ -14,9 +14,15 @@ enum StrategyScanner {
         else { return [] }
 
         var signals: [Signal] = []
-        let price      = lastCandle.close
-        let prevCloses = candles.dropLast().map(\.close)
-        let allCloses  = candles.map(\.close)
+        let price         = lastCandle.close
+        let prevCloses    = candles.dropLast().map(\.close)
+        let prevClosesArr = Array(prevCloses)
+        let allCloses     = candles.map(\.close)
+
+        // Pre-computed prev-candle EMA values — reused by strategies 3, 4, 8, 11
+        let prevEma9Last  = TechnicalAnalysis.ema(values: prevClosesArr, period: 9).last  ?? 0
+        let prevEma21Last = TechnicalAnalysis.ema(values: prevClosesArr, period: 21).last ?? 0
+        let prevEma50Last = TechnicalAnalysis.ema(values: prevClosesArr, period: 50).last ?? 0
         let volRatio   = lastCandle.volume / max(ind.avgVolume20, 1)
         let confluence = TechnicalAnalysis.confluenceScore(candles: candles, ind: ind, price: price)
         let dailyChange: Double? = prevCandle.close > 0
@@ -46,9 +52,9 @@ enum StrategyScanner {
         // RSI 28 altından yukarı döner + MACD histogramı negatiften pozitife geçer
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.oversoldReversal) {
-            let prevRSI = TechnicalAnalysis.rsi(closes: Array(prevCloses))
+            let prevRSI = TechnicalAnalysis.rsi(closes: prevClosesArr)
             if prevRSI < 28, ind.rsi >= 28, confluence >= 2 {
-                let (_, _, prevHist) = TechnicalAnalysis.macd(closes: Array(prevCloses))
+                let (_, _, prevHist) = TechnicalAnalysis.macd(closes: prevClosesArr)
                 let macdConfirmed = (prevHist.last ?? 0) < 0 && ind.macdHistogram > 0
                 if macdConfirmed {
                     signals.append(make(
@@ -66,22 +72,18 @@ enum StrategyScanner {
         // Kısa vadeli momentum dönüşü — fiyat EMA50 üzerinde olmalı
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.emaBullishCross) {
-            let prevEma9Arr  = TechnicalAnalysis.ema(values: Array(prevCloses), period: 9)
-            let prevEma21Arr = TechnicalAnalysis.ema(values: Array(prevCloses), period: 21)
-            if let pe9 = prevEma9Arr.last, let pe21 = prevEma21Arr.last {
-                let emaCrossed = pe9 < pe21 && ind.ema9 > ind.ema21
-                if emaCrossed,
-                   price > ind.ema50,
-                   ind.rsi > 45,
-                   lastCandle.volume >= ind.avgVolume20 * 0.9,
-                   confluence >= 2 {
-                    signals.append(make(
-                        stock: stock, type: .emaBullishCross,
-                        strength: volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate,
-                        timeframe: timeframe, price: price, ind: ind,
-                        dailyChange: dailyChange
-                    ))
-                }
+            let emaCrossed = prevEma9Last < prevEma21Last && ind.ema9 > ind.ema21
+            if emaCrossed,
+               price > ind.ema50,
+               ind.rsi > 45,
+               lastCandle.volume >= ind.avgVolume20 * 0.9,
+               confluence >= 2 {
+                signals.append(make(
+                    stock: stock, type: .emaBullishCross,
+                    strength: volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate,
+                    timeframe: timeframe, price: price, ind: ind,
+                    dailyChange: dailyChange
+                ))
             }
         }
 
@@ -90,22 +92,18 @@ enum StrategyScanner {
         // Orta vadeli trend dönüşü — EMA9/21'den çok daha güvenilir
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.goldenCross) {
-            let prevEma21Arr = TechnicalAnalysis.ema(values: Array(prevCloses), period: 21)
-            let prevEma50Arr = TechnicalAnalysis.ema(values: Array(prevCloses), period: 50)
-            if let pe21 = prevEma21Arr.last, let pe50 = prevEma50Arr.last {
-                let freshCross = pe21 <= pe50 && ind.ema21 > ind.ema50
-                if freshCross,
-                   price > ind.ema21,
-                   ind.rsi > 45, ind.rsi < 72,
-                   lastCandle.volume >= ind.avgVolume20,
-                   confluence >= 2 {
-                    signals.append(make(
-                        stock: stock, type: .goldenCross,
-                        strength: volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate,
-                        timeframe: timeframe, price: price, ind: ind,
-                        volRatio: volRatio, dailyChange: dailyChange
-                    ))
-                }
+            let freshCross = prevEma21Last <= prevEma50Last && ind.ema21 > ind.ema50
+            if freshCross,
+               price > ind.ema21,
+               ind.rsi > 45, ind.rsi < 72,
+               lastCandle.volume >= ind.avgVolume20,
+               confluence >= 2 {
+                signals.append(make(
+                    stock: stock, type: .goldenCross,
+                    strength: volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate,
+                    timeframe: timeframe, price: price, ind: ind,
+                    volRatio: volRatio, dailyChange: dailyChange
+                ))
             }
         }
 
@@ -203,12 +201,8 @@ enum StrategyScanner {
             let rsiOk      = ind.rsi > 50 && ind.rsi < 72
 
             if aligned && priceAbove && volOk && rsiOk {
-                let prevEma9  = TechnicalAnalysis.ema(values: Array(prevCloses), period: 9).last  ?? 0
-                let prevEma21 = TechnicalAnalysis.ema(values: Array(prevCloses), period: 21).last ?? 0
-                let prevEma50 = TechnicalAnalysis.ema(values: Array(prevCloses), period: 50).last ?? 0
-
-                if ind.ema9 > prevEma9 {
-                    let freshCross = prevEma21 <= prevEma50 && ind.ema21 > ind.ema50
+                if ind.ema9 > prevEma9Last {
+                    let freshCross = prevEma21Last <= prevEma50Last && ind.ema21 > ind.ema50
                     let isStrong   = freshCross || (volRatio >= 2.0 && ind.rsi > 55)
                     signals.append(make(
                         stock: stock, type: .maStack,
@@ -295,10 +289,9 @@ enum StrategyScanner {
                 .filter { $0 }.count
 
             if conditionCount == 5 {
-                let prevEma9 = TechnicalAnalysis.ema(values: Array(prevCloses), period: 9).last ?? 0
                 let prevDir  = stDirs.count >= 2 ? stDirs[stDirs.count - 2] : 0
                 let freshSignal = (prevDir == -1 && stDirs.last == 1) ||
-                                  (prevEma9 < ind.ema9 * 0.998)
+                                  (prevEma9Last < ind.ema9 * 0.998)
                 let isStrong = freshSignal && volRatio >= 1.5
 
                 signals.append(make(
