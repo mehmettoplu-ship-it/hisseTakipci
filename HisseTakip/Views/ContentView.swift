@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var scanner: ScannerViewModel
-    @AppStorage("scanOnLaunch") private var scanOnLaunch = true
+    @AppStorage("scanOnLaunch") private var scanOnLaunch = false
     @State var selectedTab = 0
 
     private var multiSignalStockCount: Int {

@@ -3,7 +3,7 @@ import UIKit
 
 struct SettingsView: View {
     // Genel
-    @AppStorage("scanOnLaunch")          private var scanOnLaunch          = true
+    @AppStorage("scanOnLaunch")          private var scanOnLaunch          = false
     @AppStorage("notificationsEnabled")  private var notificationsEnabled  = true
     @AppStorage("onlyStrongAlert")       private var onlyStrongAlert       = false
     @AppStorage("minRSIFilter")          private var minRSIFilter: Double  = 0
