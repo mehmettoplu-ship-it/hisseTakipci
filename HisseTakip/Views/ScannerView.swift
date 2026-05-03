@@ -3,6 +3,7 @@ import SwiftUI
 struct ScannerView: View {
     @EnvironmentObject private var vm: ScannerViewModel
     @State private var selectedStrategy: SignalType? = nil
+    @State private var showFailedSheet = false
 
     var body: some View {
         NavigationStack {
@@ -43,6 +44,10 @@ struct ScannerView: View {
             }
             .sheet(item: $selectedStrategy) { type in
                 StrategySignalSheet(type: type)
+                    .environmentObject(vm)
+            }
+            .sheet(isPresented: $showFailedSheet) {
+                FailedStocksSheet()
                     .environmentObject(vm)
             }
         }
@@ -226,9 +231,16 @@ struct ScannerView: View {
                             .foregroundStyle(.secondary)
                     }
                     if vm.fetchErrors > 0 {
-                        Label("\(vm.fetchErrors) hata", systemImage: "exclamationmark.triangle")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.1))
+                        Button {
+                            showFailedSheet = true
+                        } label: {
+                            Label("\(vm.fetchErrors) hata", systemImage: "exclamationmark.triangle.fill")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.1))
+                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(Color(red: 1.0, green: 0.45, blue: 0.1).opacity(0.12))
+                                .clipShape(Capsule())
+                        }
                     }
                 }
             }
@@ -434,6 +446,80 @@ private struct StrategySignalSheet: View {
                 }
             }
             .navigationTitle(type.emoji + " " + type.rawValue)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Kapat") { dismiss() }
+                        .font(.system(size: 15, weight: .semibold))
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+// MARK: - Hatalı Hisseler Sheet
+
+private struct FailedStocksSheet: View {
+    @EnvironmentObject var vm: ScannerViewModel
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if vm.failedStocks.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color(red: 0.1, green: 0.85, blue: 0.55))
+                        Text("Hata yok")
+                            .font(.title3.weight(.bold))
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        Section {
+                            ForEach(vm.failedStocks) { item in
+                                HStack(spacing: 12) {
+                                    ZStack {
+                                        Circle()
+                                            .fill(Color(red: 1.0, green: 0.45, blue: 0.1).opacity(0.15))
+                                            .frame(width: 38, height: 38)
+                                        Text(String(item.stock.symbol.prefix(2)))
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.1))
+                                    }
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(item.stock.symbol)
+                                            .font(.system(size: 14, weight: .bold))
+                                        Text(item.stock.name)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
+                                    Text(item.timeframe.displayName)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 8).padding(.vertical, 4)
+                                        .background(Color(.tertiarySystemFill))
+                                        .clipShape(Capsule())
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        } header: {
+                            Text("Veri alınamayan hisseler (\(vm.failedStocks.count))")
+                                .font(.caption.weight(.semibold))
+                        } footer: {
+                            Text("Bu hisseler için Yahoo Finance'e bağlanırken ağ hatası oluştu. Bir sonraki taramada tekrar denenecek.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Hata Raporu")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

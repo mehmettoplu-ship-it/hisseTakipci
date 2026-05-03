@@ -1,6 +1,12 @@
 import Foundation
 import Combine
 
+struct FailedStock: Identifiable {
+    let id   = UUID()
+    let stock: Stock
+    let timeframe: Timeframe
+}
+
 @MainActor
 final class ScannerViewModel: ObservableObject {
     @Published var signals: [Signal]     = []
@@ -14,6 +20,7 @@ final class ScannerViewModel: ObservableObject {
     @Published var currentSymbol: String? = nil
     @Published var fetchErrors: Int      = 0
     @Published var scanDuration: TimeInterval? = nil
+    @Published var failedStocks: [FailedStock] = []
 
     private var scanTask: Task<Void, Never>?
     private var autoScanTask: Task<Void, Never>?
@@ -149,6 +156,7 @@ final class ScannerViewModel: ObservableObject {
         progress       = 0
         scannedCount   = 0
         fetchErrors    = 0
+        failedStocks   = []
         errorMessage   = nil
         currentSymbol  = nil
         let scanStart  = Date()
@@ -176,29 +184,30 @@ final class ScannerViewModel: ObservableObject {
                 try? await Task.sleep(for: .milliseconds(120))
             }
             currentSymbol = chunk.first?.0.symbol
-            await withTaskGroup(of: ([Signal], Bool).self) { group in
+            await withTaskGroup(of: ([Signal], FailedStock?).self) { group in
                 for (stock, timeframe) in chunk {
                     group.addTask {
-                        guard !Task.isCancelled else { return ([], false) }
+                        guard !Task.isCancelled else { return ([], nil) }
                         do {
                             let candles = try await YahooFinanceService.shared
                                 .fetchCandles(symbol: stock.id, timeframe: timeframe)
                             let sigs = StrategyScanner.scan(
                                 stock: stock, candles: candles,
                                 timeframe: timeframe, enabledStrategies: strategies)
-                            return (sigs, false)
+                            return (sigs, nil)
                         } catch FetchError.noData {
-                            // Hisse Yahoo Finance'te yok — hata sayılmaz
-                            return ([], false)
+                            return ([], nil)
                         } catch {
-                            // Gerçek hata: timeout, rate limit, ağ problemi
-                            return ([], true)
+                            return ([], FailedStock(stock: stock, timeframe: timeframe))
                         }
                     }
                 }
-                for await (partialSignals, hadError) in group {
+                for await (partialSignals, failed) in group {
                     newSignals.append(contentsOf: partialSignals)
-                    if hadError { fetchErrors += 1 }
+                    if let f = failed {
+                        fetchErrors  += 1
+                        failedStocks.append(f)
+                    }
                     scannedCount += 1
                     progress = Double(scannedCount) / total
                 }
