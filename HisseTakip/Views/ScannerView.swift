@@ -104,19 +104,10 @@ struct ScannerView: View {
                     icon: "bolt.fill",
                     color: Color(red: 0.1, green: 0.85, blue: 0.55))
             Divider().frame(height: 40).opacity(0.5)
-            if vm.isScanning || vm.fetchErrors > 0 {
-                statBox(value: "\(vm.fetchErrors)",
-                        label: "Hata",
-                        icon: "exclamationmark.triangle.fill",
-                        color: vm.fetchErrors > 0
-                            ? Color(red: 1.0, green: 0.45, blue: 0.1)
-                            : .secondary)
-            } else {
-                statBox(value: "\(vm.signals.filter { $0.type == .smartMomentum }.count)",
-                        label: "Akıllı Momentum",
-                        icon: "brain.fill",
-                        color: Color(red: 1.0, green: 0.72, blue: 0.0))
-            }
+            statBox(value: "\(Set(vm.signals.map(\.stock)).count)",
+                    label: "Hisse",
+                    icon: "person.crop.circle.fill",
+                    color: Color(red: 0.7, green: 0.35, blue: 1.0))
         }
     }
 

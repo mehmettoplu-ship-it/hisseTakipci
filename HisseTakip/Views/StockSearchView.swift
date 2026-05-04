@@ -3,18 +3,21 @@ import SwiftUI
 struct StockSearchView: View {
     @Binding var selectedTab: Int
     @EnvironmentObject private var scanner: ScannerViewModel
-    @State private var query         = ""
+    @State private var query              = ""
+    @State private var debouncedQuery     = ""
+    @State private var debounceTask: Task<Void, Never>? = nil
     @State private var recentIDs: [String] = []
+    @State private var showClearConfirm   = false
     @FocusState private var focused: Bool
 
     private let recentKey = "recentSearchIDs"
 
     private var results: [Stock] {
-        guard query.count >= 1 else { return [] }
-        let q = query.uppercased().trimmingCharacters(in: .whitespaces)
+        guard debouncedQuery.count >= 1 else { return [] }
+        let q = debouncedQuery.uppercased().trimmingCharacters(in: .whitespaces)
         return scanner.stockList.filter {
             $0.symbol.hasPrefix(q) ||
-            $0.name.localizedCaseInsensitiveContains(query)
+            $0.name.localizedCaseInsensitiveContains(debouncedQuery)
         }
         .sorted { a, b in
             let aExact = a.symbol == q
@@ -46,7 +49,7 @@ struct StockSearchView: View {
                 Divider().opacity(0.4)
 
                 Group {
-                    if query.isEmpty {
+                    if debouncedQuery.isEmpty {
                         emptyState
                     } else if results.isEmpty {
                         notFound
@@ -74,6 +77,24 @@ struct StockSearchView: View {
                 }
             }
             .onAppear { loadRecents() }
+            .onChange(of: query) { newValue in
+                debounceTask?.cancel()
+                guard !newValue.isEmpty else {
+                    debouncedQuery = ""
+                    return
+                }
+                debounceTask = Task {
+                    try? await Task.sleep(nanoseconds: 300_000_000)
+                    guard !Task.isCancelled else { return }
+                    debouncedQuery = newValue
+                }
+            }
+            .confirmationDialog("Son aramalar silinsin mi?",
+                                isPresented: $showClearConfirm,
+                                titleVisibility: .visible) {
+                Button("Temizle", role: .destructive) { clearRecents() }
+                Button("İptal", role: .cancel) { }
+            }
         }
     }
 
@@ -140,7 +161,7 @@ struct StockSearchView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
                 Spacer()
-                Button("Temizle") { clearRecents() }
+                Button("Temizle") { showClearConfirm = true }
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.red.opacity(0.7))
             }

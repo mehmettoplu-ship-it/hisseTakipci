@@ -342,7 +342,7 @@ struct StockDetailView: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
 
-            ForEach(Array(vm.statements.prefix(5).enumerated()), id: \.offset) { i, s in
+            ForEach(Array(vm.statements.enumerated()), id: \.offset) { i, s in
                 quarterlyRow(index: i, stmt: s)
             }
         }

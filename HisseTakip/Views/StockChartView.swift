@@ -5,7 +5,8 @@ struct StockChartView: View {
     let candles: [Candle]
     let indicators: TechnicalIndicators?
 
-    private var displayCandles: [Candle] { Array(candles.suffix(60)) }
+    private let candleWindowSize = 60
+    private var displayCandles: [Candle] { Array(candles.suffix(candleWindowSize)) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -54,10 +55,23 @@ struct StockChartView: View {
 
     private func rsiChart(rsi: Double) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text("RSI  \(String(format: "%.1f", rsi))")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .padding(.leading, 8)
+            HStack {
+                Text("RSI  \(String(format: "%.1f", rsi))")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Spacer()
+                HStack(spacing: 5) {
+                    Circle().fill(Color.green.opacity(0.55)).frame(width: 5, height: 5)
+                    Text("30 Aşırı Satım")
+                        .font(.system(size: 7))
+                        .foregroundStyle(.secondary)
+                    Circle().fill(Color.red.opacity(0.55)).frame(width: 5, height: 5)
+                    Text("70 Aşırı Alım")
+                        .font(.system(size: 7))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding(.horizontal, 8)
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
                     Rectangle().fill(Color(.systemGray5)).cornerRadius(4)

@@ -50,8 +50,8 @@ KOŞULLAR:
   - Confluence skoru en az 2/5
 
 GÜÇLÜ SİNYAL:
-  RSI 24'ün altından döndüyse → Güçlü (çok derin dip)
-  28'den döndüyse → Orta
+  Önceki RSI 22'nin altındaysa → Güçlü (çok derin aşırı satım)
+  Önceki RSI 22–28 arasındaysa → Orta
 
 MANTIK:
   Tek başına RSI'nın 30 altına girmesi yeterli değildir,
@@ -476,8 +476,10 @@ NE YAPAR:
   sinyal türüdür.
 
 KOŞULLAR (7 koşulun TAMAMI gerekli):
-  C1 — ATR Daralması: Son 10 mumun ATR'ı, son 20 mumun ATR'ının
-       %65'inden düşük (sıkışma/daralma gerçekleşmiş olmalı)
+  C1 — ATR Daralması: Kırılma gününden önceki 10 mumun ATR'ı,
+       önceki 20 mumun ATR'ının %65'inden düşük
+       (bugünkü patlayan mum ölçüme dahil edilmez — sıkışma
+        dönemi doğru ölçülür)
 
   C2 — Hacim Kuruması: Son 5 mumun ortalama hacmi,
        20 günlük ortalama hacmin %70'inden az

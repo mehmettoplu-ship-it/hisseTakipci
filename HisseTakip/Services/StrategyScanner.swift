@@ -59,7 +59,7 @@ enum StrategyScanner {
                 if macdConfirmed {
                     signals.append(make(
                         stock: stock, type: .oversoldReversal,
-                        strength: ind.rsi < 24 ? .strong : .moderate,
+                        strength: prevRSI < 22 ? .strong : .moderate,
                         timeframe: timeframe, price: price, ind: ind,
                         dailyChange: dailyChange
                     ))
@@ -385,8 +385,10 @@ enum StrategyScanner {
         // Sıkışma + hacim kuruması + 3x patlama — Minervini metodolojisi
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.vcpBreakout), candles.count >= 30 {
-            let shortATR = TechnicalAnalysis.atrArray(candles: Array(candles.suffix(20)), period: 10).last ?? 0
-            let baseATR  = TechnicalAnalysis.atrArray(candles: Array(candles.suffix(40)), period: 20).last ?? 0
+            // Bugünkü patlayan mumu hariç tutarak sıkışma dönemini ölç
+            let contractCandles = Array(candles.suffix(21).dropLast())
+            let shortATR = TechnicalAnalysis.atrArray(candles: Array(contractCandles.suffix(20)), period: 10).last ?? 0
+            let baseATR  = TechnicalAnalysis.atrArray(candles: Array(candles.suffix(41).dropLast()), period: 20).last ?? 0
             let atrContracted = baseATR > 0 && shortATR < baseATR * 0.65
 
             let recent5AvgVol = candles.suffix(6).dropLast().map(\.volume).reduce(0, +) / 5

@@ -7,7 +7,7 @@ struct SettingsView: View {
     @AppStorage("notificationsEnabled")  private var notificationsEnabled  = true
     @AppStorage("onlyStrongAlert")       private var onlyStrongAlert       = false
     @AppStorage("minRSIFilter")          private var minRSIFilter: Double  = 0
-    @AppStorage("maxRSIFilter")          private var maxRSIFilter: Double  = 70
+    @AppStorage("maxRSIFilter")          private var maxRSIFilter: Double  = 100
 
     // Otomatik Tarama
     @AppStorage("autoScanIntervalMinutes") private var autoScanInterval: Int = 15
