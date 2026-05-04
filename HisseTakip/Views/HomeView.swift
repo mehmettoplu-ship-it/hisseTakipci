@@ -738,9 +738,13 @@ struct SectorStocksView: View {
         let signalColor: Color = hasStrong
             ? Color(red: 0.1, green: 0.85, blue: 0.55)
             : .orange
-        let isFav = favorites.isFavorite(stock)
+        let isFav  = favorites.isFavorite(stock)
+        let price  = signals.first?.price
+        let chg    = signals.first?.dailyChangePercent
+        let chgUp  = (chg ?? 0) >= 0
 
         return HStack(spacing: 12) {
+            // Avatar
             ZStack {
                 Circle()
                     .fill(LinearGradient(
@@ -753,8 +757,9 @@ struct SectorStocksView: View {
                     .foregroundStyle(.white)
             }
 
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
+            // Sol: sembol + sinyal tipleri
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 5) {
                     Text(stock.symbol)
                         .font(.system(size: 14, weight: .bold))
                     if isFav {
@@ -763,28 +768,47 @@ struct SectorStocksView: View {
                             .foregroundStyle(Color(red: 1.0, green: 0.75, blue: 0.0))
                     }
                 }
-                Text(stock.name)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if signals.isEmpty {
+                    Text(stock.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                } else {
+                    // Sinyal tipleri — emoji + kısa ad
+                    HStack(spacing: 4) {
+                        ForEach(signals, id: \.id) { sig in
+                            Text(sig.type.emoji + " " + sig.type.rawValue)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .padding(.horizontal, 5).padding(.vertical, 2)
+                                .background(Color(.tertiarySystemBackground))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
             }
 
             Spacer()
 
-            if !signals.isEmpty {
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text("\(signals.count) sinyal")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(signalColor)
+            // Sağ: fiyat + değişim
+            VStack(alignment: .trailing, spacing: 3) {
+                if let p = price {
+                    Text(String(format: "%.2f ₺", p))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.primary)
+                }
+                if let chg {
+                    Text(String(format: "%+.1f%%", chg))
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(chgUp
+                            ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                            : Color(red: 1.0, green: 0.28, blue: 0.32))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background((chgUp
+                            ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                            : Color(red: 1.0, green: 0.28, blue: 0.32)).opacity(0.12))
                         .clipShape(Capsule())
-                    if let chg = signals.first?.dailyChangePercent {
-                        Text(String(format: "%+.1f%%", chg))
-                            .font(.system(size: 11, weight: .bold, design: .monospaced))
-                            .foregroundStyle(chg >= 0
-                                ? Color(red: 0.1, green: 0.85, blue: 0.55) : .red)
-                    }
                 }
             }
 
