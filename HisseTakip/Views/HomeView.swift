@@ -5,8 +5,11 @@ struct HomeView: View {
     @ObservedObject  private var favorites = FavoritesManager.shared
     @StateObject     private var marketVM  = MarketStatusViewModel()
     @Binding var selectedTab: Int
-    @State private var now   = Date()
-    @State private var pulse = false
+    @State private var now          = Date()
+    @State private var pulse        = false
+    @State private var sectorSheet: SectorID? = nil
+
+    private struct SectorID: Identifiable { let name: String; var id: String { name } }
 
     private let tickTimer = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
     private let liveTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
@@ -85,6 +88,10 @@ struct HomeView: View {
             .onAppear { marketVM.refresh() }
             .onReceive(tickTimer) { _ in now = Date() }
             .onReceive(liveTimer) { _ in marketVM.refresh() }
+            .sheet(item: $sectorSheet) { sid in
+                SectorStocksView(sectorName: sid.name)
+                    .environmentObject(scanner)
+            }
         }
     }
 
@@ -286,7 +293,10 @@ struct HomeView: View {
 
                 VStack(spacing: 6) {
                     ForEach(Array(summaries.prefix(6))) { s in
-                        sectorRow(s, rank: (summaries.firstIndex { $0.id == s.id } ?? 0) + 1)
+                        Button { sectorSheet = SectorID(name: s.sector) } label: {
+                            sectorRow(s, rank: (summaries.firstIndex { $0.id == s.id } ?? 0) + 1)
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
@@ -686,5 +696,114 @@ struct HomeView: View {
         if e < 3600  { return "\(Int(e / 60)) dk önce" }
         if e < 86400 { return "\(Int(e / 3600)) saat önce" }
         return "\(Int(e / 86400)) gün önce"
+    }
+}
+
+// MARK: - Sektör Hisseleri Sheet
+
+struct SectorStocksView: View {
+    @EnvironmentObject private var scanner: ScannerViewModel
+    @ObservedObject    private var favorites = FavoritesManager.shared
+    let sectorName: String
+
+    private var stocks: [Stock] {
+        scanner.stockList
+            .filter { $0.sector == sectorName }
+            .sorted { l, r in
+                let ls = scanner.signals.filter { $0.stock.id == l.id }.count
+                let rs = scanner.signals.filter { $0.stock.id == r.id }.count
+                return ls > rs
+            }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List(stocks) { stock in
+                NavigationLink { StockDetailView(stock: stock) } label: {
+                    stockRow(stock)
+                }
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(.init(top: 5, leading: 14, bottom: 5, trailing: 14))
+            }
+            .listStyle(.plain)
+            .navigationTitle(sectorName)
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private func stockRow(_ stock: Stock) -> some View {
+        let signals   = scanner.signals.filter { $0.stock.id == stock.id }
+        let hasStrong = signals.contains { $0.strength == .strong }
+        let signalColor: Color = hasStrong
+            ? Color(red: 0.1, green: 0.85, blue: 0.55)
+            : .orange
+        let isFav = favorites.isFavorite(stock)
+
+        return HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(
+                        colors: [Color(red: 0.2, green: 0.5, blue: 1.0),
+                                 Color(red: 0.1, green: 0.3, blue: 0.85)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 38, height: 38)
+                Text(String(stock.symbol.prefix(2)))
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(stock.symbol)
+                        .font(.system(size: 14, weight: .bold))
+                    if isFav {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(Color(red: 1.0, green: 0.75, blue: 0.0))
+                    }
+                }
+                Text(stock.name)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
+            if !signals.isEmpty {
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("\(signals.count) sinyal")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(signalColor)
+                        .clipShape(Capsule())
+                    if let chg = signals.first?.dailyChangePercent {
+                        Text(String(format: "%+.1f%%", chg))
+                            .font(.system(size: 11, weight: .bold, design: .monospaced))
+                            .foregroundStyle(chg >= 0
+                                ? Color(red: 0.1, green: 0.85, blue: 0.55) : .red)
+                    }
+                }
+            }
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .strokeBorder(
+                            signals.isEmpty ? Color.clear : signalColor.opacity(0.2),
+                            lineWidth: 1
+                        )
+                )
+        )
     }
 }
