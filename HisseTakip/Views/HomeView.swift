@@ -11,6 +11,36 @@ struct HomeView: View {
     private let tickTimer = Timer.publish(every: 10, on: .main, in: .common).autoconnect()
     private let liveTimer = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
 
+    private struct SectorSummary: Identifiable {
+        let sector: String
+        let signalCount: Int
+        let strongCount: Int
+        let avgChange: Double?
+        let avgVolRatio: Double?
+        var id: String { sector }
+
+        var score: Double {
+            let changeBonus = avgChange.map { max($0, 0) * 0.5 } ?? 0
+            let volBonus    = avgVolRatio.map { max($0 - 1.0, 0) * 0.4 } ?? 0
+            return Double(strongCount) * 3 + Double(signalCount) + changeBonus + volBonus
+        }
+    }
+
+    private var sectorSummaries: [SectorSummary] {
+        guard !scanner.signals.isEmpty else { return [] }
+        let grouped = Dictionary(grouping: scanner.signals, by: \.stock.sector)
+        return grouped.map { sector, sigs in
+            let strongCount = sigs.filter { $0.strength == .strong }.count
+            let changes     = sigs.compactMap(\.dailyChangePercent)
+            let avgChange   = changes.isEmpty ? nil : changes.reduce(0, +) / Double(changes.count)
+            let vols        = sigs.compactMap(\.volumeRatio)
+            let avgVol      = vols.isEmpty ? nil : vols.reduce(0, +) / Double(vols.count)
+            return SectorSummary(sector: sector, signalCount: sigs.count,
+                                 strongCount: strongCount, avgChange: avgChange, avgVolRatio: avgVol)
+        }
+        .sorted { $0.score > $1.score }
+    }
+
     private var favoriteStocks: [Stock] {
         scanner.stockList
             .filter { favorites.isFavorite($0) }
@@ -28,6 +58,7 @@ struct HomeView: View {
                     bist100Card
                     quickStats
                     favoritesSection
+                    sectorRotationSection
                     recentSignalsSection
                 }
                 .padding(.horizontal, 16)
@@ -233,6 +264,119 @@ struct HomeView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Sektör Rotasyonu
+
+    @ViewBuilder
+    private var sectorRotationSection: some View {
+        let summaries = sectorSummaries
+        if !summaries.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Sektör Rotasyonu", systemImage: "arrow.triangle.2.circlepath")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("Sinyal bazlı")
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 4)
+
+                VStack(spacing: 6) {
+                    ForEach(Array(summaries.prefix(6))) { s in
+                        sectorRow(s, rank: (summaries.firstIndex { $0.id == s.id } ?? 0) + 1)
+                    }
+                }
+            }
+        }
+    }
+
+    private func sectorRow(_ s: SectorSummary, rank: Int) -> some View {
+        let change     = s.avgChange ?? 0
+        let changeUp   = change >= 0
+        let changeColor: Color = changeUp
+            ? Color(red: 0.1, green: 0.85, blue: 0.55)
+            : Color(red: 1.0, green: 0.28, blue: 0.32)
+        let volRatio   = s.avgVolRatio ?? 1.0
+        let volBarMax  = 3.0
+        let volFill    = min(volRatio / volBarMax, 1.0)
+        let volColor: Color = volRatio >= 2.0
+            ? Color(red: 0.2, green: 0.5, blue: 1.0)
+            : volRatio >= 1.3 ? .orange : Color(.systemGray4)
+
+        return HStack(spacing: 10) {
+            // Sıra
+            Text("\(rank)")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundStyle(.tertiary)
+                .frame(width: 14)
+
+            // Sektör adı
+            Text(s.sector)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Sinyal badge
+            HStack(spacing: 3) {
+                if s.strongCount > 0 {
+                    Text("\(s.strongCount)💪")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color(red: 0.1, green: 0.85, blue: 0.55))
+                }
+                Text("\(s.signalCount)")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                Image(systemName: "bell.fill")
+                    .font(.system(size: 8))
+                    .foregroundStyle(.secondary)
+            }
+
+            // Hacim çubuğu
+            VStack(alignment: .trailing, spacing: 2) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(Color(.systemGray5))
+                            .frame(height: 4)
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(volColor)
+                            .frame(width: geo.size.width * CGFloat(volFill), height: 4)
+                    }
+                }
+                .frame(width: 44, height: 4)
+                Text(String(format: "%.1fx", volRatio))
+                    .font(.system(size: 8, weight: .medium, design: .monospaced))
+                    .foregroundStyle(volColor)
+            }
+            .frame(width: 44)
+
+            // Değişim %
+            if s.avgChange != nil {
+                Text(String(format: "%+.1f%%", change))
+                    .font(.system(size: 12, weight: .bold, design: .monospaced))
+                    .foregroundStyle(changeColor)
+                    .frame(width: 52, alignment: .trailing)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(
+                            rank == 1
+                                ? Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.25)
+                                : Color.clear,
+                            lineWidth: 1
+                        )
+                )
+        )
     }
 
     // MARK: - Section Header
