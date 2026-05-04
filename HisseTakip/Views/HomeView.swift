@@ -483,7 +483,7 @@ struct HomeView: View {
                     colors: cardColors(marketVM.status?.condition),
                     startPoint: .topLeading, endPoint: .bottomTrailing
                 ))
-                .frame(height: 210)
+                .frame(height: 170)
 
             Circle()
                 .fill(Color.white.opacity(0.07))
@@ -500,7 +500,7 @@ struct HomeView: View {
                     Text("Piyasa verisi yükleniyor…")
                         .font(.subheadline).foregroundStyle(.white.opacity(0.8))
                 }
-                .frame(height: 210)
+                .frame(height: 170)
             } else if let s = marketVM.status {
                 bist100Content(s)
             } else {
@@ -514,7 +514,7 @@ struct HomeView: View {
                         .padding(.horizontal, 14).padding(.vertical, 6)
                         .background(.white.opacity(0.18)).clipShape(Capsule())
                 }
-                .frame(height: 210)
+                .frame(height: 170)
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: 28))
@@ -615,7 +615,7 @@ struct HomeView: View {
             .padding(.vertical, 11)
             .background(.ultraThinMaterial.opacity(0.45))
         }
-        .frame(height: 210)
+        .frame(height: 170)
     }
 
     private func highLowBadge(_ label: String, value: Double, color: Color) -> some View {
