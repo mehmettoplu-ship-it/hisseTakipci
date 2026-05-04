@@ -3,93 +3,167 @@ import UIKit
 
 struct SignalListView: View {
     @EnvironmentObject private var vm: ScannerViewModel
+    @State private var groupMode: GroupMode = .sector
     @State private var filterTimeframe: Timeframe?
     @State private var filterStrength: SignalStrength?
-    @State private var showSingleSignals = false
 
-    private var stockGroups: [(stock: Stock, signals: [Signal])] {
-        let strengthOrder: [SignalStrength] = [.strong, .moderate, .weak]
-        let base = vm.sortedSignals.filter { s in
+    private enum GroupMode: String, CaseIterable {
+        case sector = "Sektör"
+        case stock  = "Hisse"
+    }
+
+    // Filtrelenmiş sinyaller
+    private var filtered: [Signal] {
+        vm.sortedSignals.filter { s in
             (filterTimeframe == nil || s.timeframe == filterTimeframe) &&
             (filterStrength  == nil || s.strength  == filterStrength)
         }
-        let grouped = Dictionary(grouping: base, by: \.stock)
+    }
+
+    // Hisse bazlı gruplar (tüm hisseler, tek sinyalliler de dahil)
+    private var stockGroups: [(stock: Stock, signals: [Signal])] {
+        let order: [SignalStrength] = [.strong, .moderate, .weak]
+        let grouped = Dictionary(grouping: filtered, by: \.stock)
         return grouped
             .map { (stock: $0.key, signals: $0.value.sorted {
-                let li = strengthOrder.firstIndex(of: $0.strength) ?? 2
-                let ri = strengthOrder.firstIndex(of: $1.strength) ?? 2
-                return li < ri
+                (order.firstIndex(of: $0.strength) ?? 2) < (order.firstIndex(of: $1.strength) ?? 2)
             }) }
-            .filter { showSingleSignals || $0.signals.count >= 2 }
             .sorted { l, r in
-                if l.signals.count != r.signals.count { return l.signals.count > r.signals.count }
-                let ls = l.signals.contains { $0.strength == .strong }
-                let rs = r.signals.contains { $0.strength == .strong }
-                return ls && !rs
+                let ls = l.signals.filter { $0.strength == .strong }.count
+                let rs = r.signals.filter { $0.strength == .strong }.count
+                if ls != rs { return ls > rs }
+                return l.signals.count > r.signals.count
+            }
+    }
+
+    // Sektör bazlı gruplar
+    private var sectorGroups: [(sector: String, stocks: [(stock: Stock, signals: [Signal])])] {
+        let bySector = Dictionary(grouping: stockGroups, by: { $0.stock.sector })
+        return bySector.map { sector, stocks in (sector: sector, stocks: stocks) }
+            .sorted { l, r in
+                let ls = l.stocks.flatMap(\.signals).filter { $0.strength == .strong }.count
+                let rs = r.stocks.flatMap(\.signals).filter { $0.strength == .strong }.count
+                if ls != rs { return ls > rs }
+                return l.stocks.flatMap(\.signals).count > r.stocks.flatMap(\.signals).count
             }
     }
 
     var body: some View {
         NavigationStack {
-            Group {
+            VStack(spacing: 0) {
+                // Gruplama picker
+                Picker("Gruplama", selection: $groupMode) {
+                    ForEach(GroupMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+
+                Divider().opacity(0.4)
+
                 if vm.signals.isEmpty {
                     emptyState
-                } else if stockGroups.isEmpty {
-                    noMultiSignalState
+                } else if filtered.isEmpty {
+                    noResultState
+                } else if groupMode == .sector {
+                    sectorList
                 } else {
-                    List {
-                        ForEach(stockGroups, id: \.stock.id) { item in
-                            NavigationLink {
-                                StockDetailView(stock: item.stock)
-                            } label: {
-                                StockSignalGroupCard(stock: item.stock, signals: item.signals)
-                            }
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                            .listRowInsets(.init(top: 6, leading: 14, bottom: 6, trailing: 14))
-                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                                Button { openTradingView(symbol: item.stock.symbol) } label: {
-                                    Label("TV", systemImage: "chart.xyaxis.line")
-                                }
-                                .tint(Color(red: 0.1, green: 0.47, blue: 0.95))
-                                Button { openFVT(symbol: item.stock.symbol) } label: {
-                                    Label("FVT", systemImage: "chart.bar.xaxis")
-                                }
-                                .tint(Color(red: 0.1, green: 0.6, blue: 0.35))
-                            }
-                            .swipeActions(edge: .trailing) {
-                                Button {
-                                    FavoritesManager.shared.toggle(item.stock)
-                                } label: {
-                                    let isFav = FavoritesManager.shared.isFavorite(item.stock)
-                                    Label(isFav ? "Favoriden Çıkar" : "Favoriye Ekle",
-                                          systemImage: isFav ? "star.slash" : "star.fill")
-                                }
-                                .tint(Color(red: 1.0, green: 0.65, blue: 0.0))
-                            }
-                        }
-                    }
-                    .listStyle(.plain)
+                    stockList
                 }
             }
             .navigationTitle("Sinyaller")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { filterMenu }
             }
         }
     }
 
-    // MARK: - Dış Bağlantılar
+    // MARK: - Sektör Listesi
 
-    private func openTradingView(symbol: String) {
-        let encoded = "BIST%3A\(symbol)"
-        guard let url = URL(string: "https://www.tradingview.com/chart/?symbol=\(encoded)") else { return }
-        UIApplication.shared.open(url)
+    private var sectorList: some View {
+        List {
+            ForEach(sectorGroups, id: \.sector) { group in
+                Section {
+                    ForEach(group.stocks, id: \.stock.id) { item in
+                        stockRow(item)
+                    }
+                } header: {
+                    sectorHeader(group)
+                }
+            }
+        }
+        .listStyle(.plain)
     }
 
-    private func openFVT(symbol: String) {
-        guard let url = URL(string: "https://fvt.com.tr/hisseler/yerli/\(symbol)") else { return }
-        UIApplication.shared.open(url)
+    private func sectorHeader(_ group: (sector: String, stocks: [(stock: Stock, signals: [Signal])])) -> some View {
+        let totalSignals = group.stocks.flatMap(\.signals).count
+        let strongCount  = group.stocks.flatMap(\.signals).filter { $0.strength == .strong }.count
+        return HStack(spacing: 8) {
+            Text(group.sector)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.primary)
+            Spacer()
+            if strongCount > 0 {
+                Text("\(strongCount) güçlü")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Color(red: 0.1, green: 0.85, blue: 0.55))
+                    .clipShape(Capsule())
+            }
+            Text("\(totalSignals) sinyal")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(Color(.tertiarySystemBackground))
+                .clipShape(Capsule())
+        }
+        .padding(.vertical, 4)
+        .listRowInsets(.init(top: 8, leading: 14, bottom: 2, trailing: 14))
+    }
+
+    // MARK: - Hisse Listesi
+
+    private var stockList: some View {
+        List {
+            ForEach(stockGroups, id: \.stock.id) { item in
+                stockRow(item)
+            }
+        }
+        .listStyle(.plain)
+    }
+
+    // MARK: - Ortak satır + swipe
+
+    @ViewBuilder
+    private func stockRow(_ item: (stock: Stock, signals: [Signal])) -> some View {
+        NavigationLink { StockDetailView(stock: item.stock) } label: {
+            StockSignalGroupCard(stock: item.stock, signals: item.signals)
+        }
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .listRowInsets(.init(top: 5, leading: 14, bottom: 5, trailing: 14))
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button { openTradingView(symbol: item.stock.symbol) } label: {
+                Label("TV", systemImage: "chart.xyaxis.line")
+            }
+            .tint(Color(red: 0.1, green: 0.47, blue: 0.95))
+            Button { openFVT(symbol: item.stock.symbol) } label: {
+                Label("FVT", systemImage: "chart.bar.xaxis")
+            }
+            .tint(Color(red: 0.1, green: 0.6, blue: 0.35))
+        }
+        .swipeActions(edge: .trailing) {
+            Button {
+                FavoritesManager.shared.toggle(item.stock)
+            } label: {
+                let isFav = FavoritesManager.shared.isFavorite(item.stock)
+                Label(isFav ? "Favoriden Çıkar" : "Favoriye Ekle",
+                      systemImage: isFav ? "star.slash" : "star.fill")
+            }
+            .tint(Color(red: 1.0, green: 0.65, blue: 0.0))
+        }
     }
 
     // MARK: - Boş Durumlar
@@ -99,7 +173,7 @@ struct SignalListView: View {
             ZStack {
                 Circle()
                     .fill(LinearGradient(colors: [.blue.opacity(0.15), .purple.opacity(0.08)],
-                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        startPoint: .topLeading, endPoint: .bottomTrailing))
                     .frame(width: 90, height: 90)
                 Image(systemName: "bell.slash.fill")
                     .font(.system(size: 36))
@@ -117,32 +191,14 @@ struct SignalListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private var noMultiSignalState: some View {
-        VStack(spacing: 20) {
-            ZStack {
-                Circle()
-                    .fill(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.1))
-                    .frame(width: 90, height: 90)
-                Image(systemName: "chart.bar.doc.horizontal")
-                    .font(.system(size: 36))
-                    .foregroundStyle(.secondary)
-            }
-            VStack(spacing: 8) {
-                Text("\(vm.signals.count) sinyal bulundu")
-                    .font(.title3.weight(.bold))
-                Text("Birden fazla sinyal veren hisse bulunamadı.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                Button {
-                    showSingleSignals = true
-                } label: {
-                    Text("Tüm sinyalleri göster")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.2, green: 0.5, blue: 1.0))
-                }
-                .padding(.top, 4)
-            }
+    private var noResultState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "line.3.horizontal.decrease.circle")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary)
+            Text("Filtreyle eşleşen sinyal yok")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -150,36 +206,50 @@ struct SignalListView: View {
     // MARK: - Filtre Menüsü
 
     private var filterMenu: some View {
-        Menu {
+        let active = filterTimeframe != nil || filterStrength != nil
+        return Menu {
             Section("Periyot") {
-                Button("Tümü") { filterTimeframe = nil }
+                Button { filterTimeframe = nil } label: {
+                    Label("Tümü", systemImage: filterTimeframe == nil ? "checkmark" : "")
+                }
                 ForEach(Timeframe.allCases) { tf in
-                    Button(tf.displayName) { filterTimeframe = tf }
+                    Button { filterTimeframe = tf } label: {
+                        Label(tf.displayName,
+                              systemImage: filterTimeframe == tf ? "checkmark" : "")
+                    }
                 }
             }
-            Section("Güç") {
-                Button("Tümü")   { filterStrength = nil }
-                Button("Güçlü") { filterStrength = .strong }
-                Button("Orta")  { filterStrength = .moderate }
-            }
-            Section {
-                Button {
-                    showSingleSignals.toggle()
-                } label: {
-                    Label(
-                        showSingleSignals ? "Sadece çoklu sinyaller" : "Tüm sinyalleri göster",
-                        systemImage: showSingleSignals ? "line.3.horizontal.decrease" : "list.bullet"
-                    )
+            Section("Sinyal Gücü") {
+                Button { filterStrength = nil } label: {
+                    Label("Tümü", systemImage: filterStrength == nil ? "checkmark" : "")
+                }
+                Button { filterStrength = .strong } label: {
+                    Label("Güçlü", systemImage: filterStrength == .strong ? "checkmark" : "")
+                }
+                Button { filterStrength = .moderate } label: {
+                    Label("Orta", systemImage: filterStrength == .moderate ? "checkmark" : "")
                 }
             }
         } label: {
-            let active = filterTimeframe != nil || filterStrength != nil || showSingleSignals
             Image(systemName: active
                   ? "line.3.horizontal.decrease.circle.fill"
                   : "line.3.horizontal.decrease.circle")
             .foregroundStyle(active ? .blue : .secondary)
             .font(.system(size: 18))
         }
+    }
+
+    // MARK: - Dış Bağlantılar
+
+    private func openTradingView(symbol: String) {
+        let encoded = "BIST%3A\(symbol)"
+        guard let url = URL(string: "https://www.tradingview.com/chart/?symbol=\(encoded)") else { return }
+        UIApplication.shared.open(url)
+    }
+
+    private func openFVT(symbol: String) {
+        guard let url = URL(string: "https://fvt.com.tr/hisseler/yerli/\(symbol)") else { return }
+        UIApplication.shared.open(url)
     }
 }
 
@@ -194,7 +264,6 @@ private struct StockSignalGroupCard: View {
         if signals.contains(where: { $0.strength == .moderate }) { return .moderate }
         return .weak
     }
-
     private var accentColor: Color { strengthColor(topStrength) }
 
     var body: some View {
@@ -205,7 +274,7 @@ private struct StockSignalGroupCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 2))
 
             VStack(alignment: .leading, spacing: 10) {
-                // Üst satır: avatar + sembol + sayaç + fiyat
+                // Üst: avatar + sembol + sektör + fiyat
                 HStack(spacing: 10) {
                     ZStack {
                         Circle()
@@ -229,10 +298,19 @@ private struct StockSignalGroupCard: View {
                                 .background(accentColor)
                                 .clipShape(Capsule())
                         }
-                        Text(stock.name)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Text(stock.name)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Text("·")
+                                .font(.caption2)
+                                .foregroundStyle(.tertiary)
+                            Text(stock.sector)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                        }
                     }
 
                     Spacer()
@@ -240,39 +318,27 @@ private struct StockSignalGroupCard: View {
                     if let first = signals.first {
                         VStack(alignment: .trailing, spacing: 2) {
                             Text(String(format: "%.2f ₺", first.price))
-                                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                                .font(.system(size: 14, weight: .bold, design: .monospaced))
                             if let dc = first.dailyChangePercent {
                                 Text(String(format: "%+.2f%%", dc))
                                     .font(.system(size: 11, weight: .bold, design: .monospaced))
                                     .foregroundStyle(dc >= 0
                                         ? Color(red: 0.1, green: 0.85, blue: 0.55)
                                         : Color(red: 1.0, green: 0.28, blue: 0.32))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background((dc >= 0
+                                        ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                        : Color(red: 1.0, green: 0.28, blue: 0.32)).opacity(0.12))
+                                    .clipShape(Capsule())
                             }
                         }
                     }
                 }
 
-                // Sinyal satırları
+                // Sinyal satırları (detaylı)
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(signals) { signal in
-                        HStack(spacing: 6) {
-                            Text(signal.type.emoji)
-                                .font(.system(size: 13))
-                            Text(signal.type.rawValue)
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            Spacer()
-                            Text(signal.timeframe.displayName)
-                                .font(.system(size: 10, weight: .medium))
-                                .foregroundStyle(.secondary)
-                            Circle()
-                                .fill(strengthColor(signal.strength))
-                                .frame(width: 7, height: 7)
-                        }
-                        .padding(.horizontal, 8).padding(.vertical, 5)
-                        .background(strengthColor(signal.strength).opacity(0.07))
-                        .clipShape(RoundedRectangle(cornerRadius: 7))
+                        signalDetailRow(signal)
                     }
                 }
             }
@@ -290,11 +356,68 @@ private struct StockSignalGroupCard: View {
                 )
         )
         .shadow(
-            color: topStrength == .strong
-                ? accentColor.opacity(0.18) : .black.opacity(0.07),
+            color: topStrength == .strong ? accentColor.opacity(0.18) : .black.opacity(0.07),
             radius: topStrength == .strong ? 10 : 4,
             y: topStrength == .strong ? 4 : 2
         )
+    }
+
+    private func signalDetailRow(_ signal: Signal) -> some View {
+        let sc = strengthColor(signal.strength)
+        return VStack(alignment: .leading, spacing: 5) {
+            // Sinyal adı + periyot + güç
+            HStack(spacing: 6) {
+                Text(signal.type.emoji)
+                    .font(.system(size: 13))
+                Text(signal.type.rawValue)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                Spacer()
+                Text(signal.timeframe.displayName)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 5).padding(.vertical, 2)
+                    .background(Color(.tertiarySystemBackground))
+                    .clipShape(Capsule())
+                Circle()
+                    .fill(sc)
+                    .frame(width: 7, height: 7)
+            }
+            // RSI + Hacim
+            HStack(spacing: 8) {
+                if let rsi = signal.rsi {
+                    metricBadge(label: "RSI",
+                                value: String(format: "%.0f", rsi),
+                                color: rsi > 60 ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                     : rsi < 40 ? .orange : .secondary)
+                }
+                if let vr = signal.volumeRatio {
+                    metricBadge(label: "Hacim",
+                                value: String(format: "%.1fx", vr),
+                                color: vr >= 3 ? Color(red: 0.2, green: 0.5, blue: 1.0)
+                                     : vr >= 1.5 ? .orange : .secondary)
+                }
+                Spacer()
+            }
+        }
+        .padding(.horizontal, 8).padding(.vertical, 6)
+        .background(sc.opacity(0.07))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func metricBadge(label: String, value: String, color: Color) -> some View {
+        HStack(spacing: 3) {
+            Text(label)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(.tertiary)
+            Text(value)
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundStyle(color)
+        }
+        .padding(.horizontal, 6).padding(.vertical, 2)
+        .background(Color(.tertiarySystemBackground))
+        .clipShape(Capsule())
     }
 
     private func strengthColor(_ s: SignalStrength) -> Color {
@@ -306,7 +429,7 @@ private struct StockSignalGroupCard: View {
     }
 }
 
-// MARK: - Tekil Sinyal Kartı (StrategySignalSheet için hâlâ kullanılıyor)
+// MARK: - Tekil Sinyal Kartı
 
 struct SignalCardView: View {
     let signal: Signal
@@ -319,20 +442,11 @@ struct SignalCardView: View {
         }
     }
 
-    private var strengthGradient: [Color] {
-        switch signal.strength {
-        case .strong:   return [Color(red: 0.1, green: 0.85, blue: 0.55), Color(red: 0.0, green: 0.6, blue: 0.38)]
-        case .moderate: return [Color(red: 1.0, green: 0.7, blue: 0.0), Color(red: 0.85, green: 0.4, blue: 0.0)]
-        case .weak:     return [Color(.systemGray2), Color(.systemGray3)]
-        }
-    }
-
-    private var isSmartMomentum: Bool { signal.type == .smartMomentum }
     private var isStrong: Bool { signal.strength == .strong }
 
     var body: some View {
         HStack(spacing: 0) {
-            LinearGradient(colors: strengthGradient, startPoint: .top, endPoint: .bottom)
+            strengthColor
                 .frame(width: 4)
                 .clipShape(RoundedRectangle(cornerRadius: 2))
 
@@ -340,37 +454,13 @@ struct SignalCardView: View {
                 HStack(spacing: 7) {
                     Text(signal.stock.symbol)
                         .font(.system(size: 17, weight: .black))
-                        .foregroundStyle(.primary)
-
-                    if isSmartMomentum {
-                        HStack(spacing: 3) {
-                            Image(systemName: "star.fill")
-                                .font(.system(size: 7, weight: .black))
-                            Text("PRO")
-                                .font(.system(size: 9, weight: .black))
-                                .tracking(0.8)
-                        }
-                        .foregroundStyle(Color(red: 0.1, green: 0.05, blue: 0.0))
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(
-                            LinearGradient(colors: [Color(red: 1.0, green: 0.85, blue: 0.15),
-                                                    Color(red: 1.0, green: 0.55, blue: 0.0)],
-                                           startPoint: .topLeading, endPoint: .bottomTrailing)
-                        )
-                        .clipShape(Capsule())
-                        .shadow(color: Color(red: 1.0, green: 0.65, blue: 0.0).opacity(0.4),
-                                radius: 4, y: 2)
-                    }
-
                     Text(signal.type.emoji + " " + signal.type.rawValue)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(strengthColor)
                         .padding(.horizontal, 7).padding(.vertical, 3)
                         .background(strengthColor.opacity(0.12))
                         .clipShape(Capsule())
-
                     Spacer()
-
                     Text(signal.timeframe.displayName)
                         .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.secondary)
@@ -381,33 +471,25 @@ struct SignalCardView: View {
 
                 HStack(spacing: 0) {
                     dataChip(label: "Fiyat", value: String(format: "%.2f ₺", signal.price))
-
                     if let dc = signal.dailyChangePercent {
                         chipDivider()
-                        dataChip(
-                            label: "Günlük",
-                            value: String(format: "%+.2f%%", dc),
-                            valueColor: dc >= 0
-                                ? Color(red: 0.1, green: 0.85, blue: 0.55)
-                                : Color(red: 1.0, green: 0.28, blue: 0.32)
-                        )
+                        dataChip(label: "Günlük",
+                                 value: String(format: "%+.2f%%", dc),
+                                 valueColor: dc >= 0
+                                    ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                    : Color(red: 1.0, green: 0.28, blue: 0.32))
                     }
                     if let rsi = signal.rsi {
                         chipDivider()
-                        dataChip(label: "RSI",
-                                 value: String(format: "%.0f", rsi),
-                                 valueColor: rsi < 30
-                                    ? Color(red: 0.1, green: 0.85, blue: 0.55)
-                                    : rsi > 70 ? Color(red: 1.0, green: 0.28, blue: 0.32) : nil)
+                        dataChip(label: "RSI", value: String(format: "%.0f", rsi),
+                                 valueColor: rsi < 30 ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                           : rsi > 70 ? Color(red: 1.0, green: 0.28, blue: 0.32) : nil)
                     }
                     if let vr = signal.volumeRatio {
                         chipDivider()
-                        dataChip(label: "Hacim",
-                                 value: String(format: "%.1fx", vr),
-                                 valueColor: vr >= 2
-                                    ? Color(red: 0.1, green: 0.85, blue: 0.55) : nil)
+                        dataChip(label: "Hacim", value: String(format: "%.1fx", vr),
+                                 valueColor: vr >= 2 ? Color(red: 0.1, green: 0.85, blue: 0.55) : nil)
                     }
-
                     Spacer()
                     Text(signal.timestamp, style: .time)
                         .font(.system(size: 10, design: .monospaced))
@@ -422,42 +504,23 @@ struct SignalCardView: View {
                 .fill(Color(.secondarySystemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(
-                            isSmartMomentum
-                                ? LinearGradient(
-                                    colors: [Color(red: 1.0, green: 0.75, blue: 0.1).opacity(0.7),
-                                             Color(red: 1.0, green: 0.45, blue: 0.0).opacity(0.2),
-                                             .clear],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing)
-                                : LinearGradient(
-                                    colors: [strengthColor.opacity(isStrong ? 0.5 : 0.2), .clear],
-                                    startPoint: .topLeading, endPoint: .bottomTrailing),
-                            lineWidth: 1
-                        )
+                        .strokeBorder(strengthColor.opacity(isStrong ? 0.4 : 0.15), lineWidth: 1)
                 )
         )
-        .shadow(
-            color: isStrong ? strengthColor.opacity(0.18) : Color.black.opacity(0.08),
-            radius: isStrong ? 10 : 4,
-            y: isStrong ? 4 : 2
-        )
+        .shadow(color: isStrong ? strengthColor.opacity(0.18) : .black.opacity(0.08),
+                radius: isStrong ? 10 : 4, y: isStrong ? 4 : 2)
     }
 
     private func dataChip(label: String, value: String, valueColor: Color? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.system(size: 9, weight: .medium))
-                .foregroundStyle(.tertiary)
-            Text(value)
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
+            Text(label).font(.system(size: 9, weight: .medium)).foregroundStyle(.tertiary)
+            Text(value).font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundStyle(valueColor ?? .primary)
         }
     }
 
     private func chipDivider() -> some View {
-        Rectangle()
-            .fill(Color(.separator).opacity(0.5))
-            .frame(width: 1, height: 20)
-            .padding(.horizontal, 9)
+        Rectangle().fill(Color(.separator).opacity(0.5))
+            .frame(width: 1, height: 20).padding(.horizontal, 9)
     }
 }

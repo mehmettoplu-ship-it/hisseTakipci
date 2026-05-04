@@ -21,18 +21,7 @@ struct HisseTakipApp: App {
             ContentView()
                 .environmentObject(scanner)
         }
-        .onChange(of: scenePhase) { _, newPhase in
-            switch newPhase {
-            case .active:
-                scanner.startAutoScan()
-            case .background:
-                scanner.stopAutoScan()
-                scheduleRefreshTask()
-                scheduleProcessTask()
-            default:
-                break
-            }
-        }
+        // Otomatik tarama devre dışı — kullanıcı manuel başlatır
     }
 
     // MARK: - Kayıt
