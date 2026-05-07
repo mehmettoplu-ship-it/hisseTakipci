@@ -60,9 +60,9 @@ struct HomeView: View {
                 VStack(spacing: 22) {
                     bist100Card
                     quickStats
+                    topPicksSection
                     favoritesSection
                     sectorRotationSection
-                    recentSignalsSection
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -252,25 +252,125 @@ struct HomeView: View {
         )
     }
 
-    // MARK: - Son Sinyaller
+    // MARK: - Günün En İyileri
 
     @ViewBuilder
-    private var recentSignalsSection: some View {
-        let top = Array(scanner.sortedSignals.prefix(5))
-        let stockCounts = Dictionary(grouping: scanner.signals, by: \.stock.id).mapValues(\.count)
-        if !top.isEmpty {
+    private var topPicksSection: some View {
+        let picks = Array(StockOpportunity.build(from: scanner.signals).prefix(3))
+        if !picks.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                sectionHeader(title: "Son Sinyaller", icon: "bolt.fill", tab: 3)
-                ForEach(top) { signal in
-                    NavigationLink {
-                        StockDetailView(stock: signal.stock)
-                    } label: {
-                        signalRow(signal, multiCount: stockCounts[signal.stock.id] ?? 1)
+                sectionHeader(title: "Günün En İyileri", icon: "trophy.fill", tab: 3)
+                VStack(spacing: 8) {
+                    ForEach(Array(picks.enumerated()), id: \.element.id) { idx, opp in
+                        NavigationLink { StockDetailView(stock: opp.stock) } label: {
+                            topPickCard(opp, rank: idx + 1)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
             }
         }
+    }
+
+    private func topPickCard(_ opp: StockOpportunity, rank: Int) -> some View {
+        let hasStrong  = opp.signals.contains { $0.strength == .strong }
+        let accentColor: Color = hasStrong
+            ? Color(red: 0.1, green: 0.85, blue: 0.55)
+            : Color(red: 1.0, green: 0.62, blue: 0.0)
+        let vol    = opp.signals.compactMap(\.volumeRatio).max()
+        let rsi    = opp.signals.compactMap(\.rsi).first
+        let change = opp.signals.compactMap(\.dailyChangePercent).max()
+        let rankColor: Color = rank == 1
+            ? Color(red: 1.0, green: 0.75, blue: 0.0)
+            : rank == 2 ? Color(.systemGray) : Color(red: 0.8, green: 0.5, blue: 0.2)
+
+        return HStack(spacing: 12) {
+            Text("\(rank)")
+                .font(.system(size: 15, weight: .black, design: .rounded))
+                .foregroundStyle(rankColor)
+                .frame(width: 18)
+
+            ZStack {
+                Circle()
+                    .fill(LinearGradient(
+                        colors: [opp.gradeColor, opp.gradeColor.opacity(0.45)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 40, height: 40)
+                Text(String(opp.stock.symbol.prefix(2)))
+                    .font(.system(size: 13, weight: .black))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text(opp.stock.symbol)
+                        .font(.system(size: 15, weight: .black))
+                        .foregroundStyle(.primary)
+                    Text("\(opp.signals.count) sinyal")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 5).padding(.vertical, 2)
+                        .background(accentColor)
+                        .clipShape(Capsule())
+                }
+                HStack(spacing: 5) {
+                    if let rsi { miniChip("RSI \(Int(rsi))",
+                                          color: rsi > 60 ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                               : rsi < 40 ? .orange : .secondary) }
+                    if let vol { miniChip(String(format: "%.1fx", vol),
+                                          color: vol >= 3 ? Color(red: 0.2, green: 0.5, blue: 1.0)
+                                               : vol >= 1.5 ? .orange : .secondary) }
+                    if let change {
+                        Text(String(format: "%+.1f%%", change))
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(change >= 0
+                                ? Color(red: 0.1, green: 0.85, blue: 0.55)
+                                : Color(red: 1.0, green: 0.28, blue: 0.32))
+                    }
+                }
+            }
+
+            Spacer()
+
+            VStack(spacing: 1) {
+                Text(opp.grade)
+                    .font(.system(size: 15, weight: .black, design: .rounded))
+                    .foregroundStyle(opp.gradeColor)
+                Text("\(opp.score)")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(opp.gradeColor.opacity(0.75))
+            }
+            .frame(width: 36, height: 36)
+            .background(opp.gradeColor.opacity(0.12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 9)
+                    .strokeBorder(opp.gradeColor.opacity(0.35), lineWidth: 1)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.secondarySystemBackground))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .strokeBorder(
+                            rank == 1 ? opp.gradeColor.opacity(0.28) : Color.clear,
+                            lineWidth: 1)
+                )
+        )
+        .shadow(color: rank == 1 ? opp.gradeColor.opacity(0.15) : .black.opacity(0.06),
+                radius: rank == 1 ? 8 : 3, y: 2)
+    }
+
+    private func miniChip(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 5).padding(.vertical, 2)
+            .background(color.opacity(0.1))
+            .clipShape(Capsule())
     }
 
     // MARK: - Sektör Rotasyonu

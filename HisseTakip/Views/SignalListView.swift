@@ -6,6 +6,7 @@ struct SignalListView: View {
     @State private var groupMode: GroupMode = .sector
     @State private var filterTimeframe: Timeframe?
     @State private var filterStrength: SignalStrength?
+    @State private var onlyHighScore = false
 
     private enum GroupMode: String, CaseIterable {
         case sector = "Sektör"
@@ -14,13 +15,22 @@ struct SignalListView: View {
 
     // Filtrelenmiş sinyaller
     private var filtered: [Signal] {
-        vm.sortedSignals.filter { s in
+        var base = vm.sortedSignals.filter { s in
             (filterTimeframe == nil || s.timeframe == filterTimeframe) &&
             (filterStrength  == nil || s.strength  == filterStrength)
         }
+        if onlyHighScore {
+            let highIDs = Set(
+                Dictionary(grouping: base, by: \.stock.id)
+                    .filter { StockOpportunity.computeScore($0.value) >= 60 }
+                    .keys
+            )
+            base = base.filter { highIDs.contains($0.stock.id) }
+        }
+        return base
     }
 
-    // Hisse bazlı gruplar (tüm hisseler, tek sinyalliler de dahil)
+    // Hisse bazlı gruplar — fırsat skoruna göre sıralı
     private var stockGroups: [(stock: Stock, signals: [Signal])] {
         let order: [SignalStrength] = [.strong, .moderate, .weak]
         let grouped = Dictionary(grouping: filtered, by: \.stock)
@@ -28,23 +38,19 @@ struct SignalListView: View {
             .map { (stock: $0.key, signals: $0.value.sorted {
                 (order.firstIndex(of: $0.strength) ?? 2) < (order.firstIndex(of: $1.strength) ?? 2)
             }) }
-            .sorted { l, r in
-                let ls = l.signals.filter { $0.strength == .strong }.count
-                let rs = r.signals.filter { $0.strength == .strong }.count
-                if ls != rs { return ls > rs }
-                return l.signals.count > r.signals.count
+            .sorted {
+                StockOpportunity.computeScore($0.signals) > StockOpportunity.computeScore($1.signals)
             }
     }
 
-    // Sektör bazlı gruplar
+    // Sektör bazlı gruplar — sektördeki en yüksek hisse skoruna göre sıralı
     private var sectorGroups: [(sector: String, stocks: [(stock: Stock, signals: [Signal])])] {
         let bySector = Dictionary(grouping: stockGroups, by: { $0.stock.sector })
         return bySector.map { sector, stocks in (sector: sector, stocks: stocks) }
             .sorted { l, r in
-                let ls = l.stocks.flatMap(\.signals).filter { $0.strength == .strong }.count
-                let rs = r.stocks.flatMap(\.signals).filter { $0.strength == .strong }.count
-                if ls != rs { return ls > rs }
-                return l.stocks.flatMap(\.signals).count > r.stocks.flatMap(\.signals).count
+                let ls = l.stocks.map { StockOpportunity.computeScore($0.signals) }.max() ?? 0
+                let rs = r.stocks.map { StockOpportunity.computeScore($0.signals) }.max() ?? 0
+                return ls > rs
             }
     }
 
@@ -58,6 +64,36 @@ struct SignalListView: View {
                 .pickerStyle(.segmented)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
+
+                HStack(spacing: 10) {
+                    Button {
+                        withAnimation(.spring(response: 0.3)) { onlyHighScore.toggle() }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "trophy.fill")
+                                .font(.system(size: 10, weight: .semibold))
+                            Text(onlyHighScore ? "A+B Aktif" : "A+B Göster")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(onlyHighScore ? .white : Color(red: 0.2, green: 0.5, blue: 1.0))
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(
+                            onlyHighScore
+                                ? Color(red: 0.2, green: 0.5, blue: 1.0)
+                                : Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.1)
+                        )
+                        .clipShape(Capsule())
+                    }
+                    .animation(.spring(response: 0.3), value: onlyHighScore)
+
+                    Spacer()
+
+                    Text("\(stockGroups.count) hisse")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 6)
 
                 Divider().opacity(0.4)
 
@@ -138,8 +174,9 @@ struct SignalListView: View {
 
     @ViewBuilder
     private func stockRow(_ item: (stock: Stock, signals: [Signal])) -> some View {
+        let score = StockOpportunity.computeScore(item.signals)
         NavigationLink { StockDetailView(stock: item.stock) } label: {
-            StockSignalGroupCard(stock: item.stock, signals: item.signals)
+            StockSignalGroupCard(stock: item.stock, signals: item.signals, score: score)
         }
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
@@ -258,6 +295,7 @@ struct SignalListView: View {
 private struct StockSignalGroupCard: View {
     let stock: Stock
     let signals: [Signal]
+    let score: Int
 
     private var topStrength: SignalStrength {
         if signals.contains(where: { $0.strength == .strong })   { return .strong }
@@ -265,6 +303,7 @@ private struct StockSignalGroupCard: View {
         return .weak
     }
     private var accentColor: Color { strengthColor(topStrength) }
+    private var scoreColor: Color  { StockOpportunity.gradeColor(for: score) }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -314,6 +353,23 @@ private struct StockSignalGroupCard: View {
                     }
 
                     Spacer()
+
+                    // Fırsat Skoru badge
+                    VStack(spacing: 1) {
+                        Text(StockOpportunity.grade(for: score))
+                            .font(.system(size: 13, weight: .black, design: .rounded))
+                            .foregroundStyle(scoreColor)
+                        Text("\(score)")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .foregroundStyle(scoreColor.opacity(0.75))
+                    }
+                    .frame(width: 34, height: 34)
+                    .background(scoreColor.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 9)
+                            .strokeBorder(scoreColor.opacity(0.3), lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 9))
 
                     if let first = signals.first {
                         VStack(alignment: .trailing, spacing: 2) {
