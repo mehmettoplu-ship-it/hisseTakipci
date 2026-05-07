@@ -10,7 +10,8 @@ enum StrategyScanner {
     ) -> [Signal] {
         guard let ind = TechnicalAnalysis.calculate(candles: candles),
               let lastCandle = candles.last,
-              let prevCandle = candles.dropLast().last
+              let prevCandle = candles.dropLast().last,
+              ind.avgVolume20 >= 50_000
         else { return [] }
 
         var signals: [Signal] = []
@@ -23,7 +24,10 @@ enum StrategyScanner {
         let prevEma9Last  = TechnicalAnalysis.ema(values: prevClosesArr, period: 9).last  ?? 0
         let prevEma21Last = TechnicalAnalysis.ema(values: prevClosesArr, period: 21).last ?? 0
         let prevEma50Last = TechnicalAnalysis.ema(values: prevClosesArr, period: 50).last ?? 0
-        let volRatio   = lastCandle.volume / max(ind.avgVolume20, 1)
+        // During market hours the current daily bar is incomplete — use previous complete bar for volume checks
+        let isIncompleteBar = Calendar.current.isDateInToday(lastCandle.timestamp)
+        let volCandle       = isIncompleteBar ? prevCandle : lastCandle
+        let volRatio        = volCandle.volume / max(ind.avgVolume20, 1)
         let confluence = TechnicalAnalysis.confluenceScore(candles: candles, ind: ind, price: price)
         let dailyChange: Double? = prevCandle.close > 0
             ? (price - prevCandle.close) / prevCandle.close * 100 : nil
@@ -76,7 +80,7 @@ enum StrategyScanner {
             if emaCrossed,
                price > ind.ema50,
                ind.rsi > 45,
-               lastCandle.volume >= ind.avgVolume20 * 0.9,
+               volCandle.volume >= ind.avgVolume20 * 0.9,
                confluence >= 2 {
                 signals.append(make(
                     stock: stock, type: .emaBullishCross,
@@ -96,7 +100,7 @@ enum StrategyScanner {
             if freshCross,
                price > ind.ema21,
                ind.rsi > 45, ind.rsi < 72,
-               lastCandle.volume >= ind.avgVolume20,
+               volCandle.volume >= ind.avgVolume20,
                confluence >= 2 {
                 signals.append(make(
                     stock: stock, type: .goldenCross,
@@ -139,7 +143,7 @@ enum StrategyScanner {
             let baseATR  = TechnicalAnalysis.atrArray(candles: Array(candles.suffix(40)), period: 20).last ?? 0
             let squeezed   = baseATR > 0 && shortATR < baseATR * 0.65
             let breakingUp = price > ind.bbMiddle && lastCandle.close > lastCandle.open
-            let volOk      = lastCandle.volume > ind.avgVolume20 * 1.2
+            let volOk      = volCandle.volume > ind.avgVolume20 * 1.2
             let rsiOk      = ind.rsi > 45 && ind.rsi < 68
 
             if squeezed && breakingUp && volOk && rsiOk && confluence >= 2 {
@@ -197,10 +201,10 @@ enum StrategyScanner {
         if enabledStrategies.contains(.maStack) {
             let aligned    = ind.ema9 > ind.ema21 && ind.ema21 > ind.ema50
             let priceAbove = price > ind.ema9
-            let volOk      = lastCandle.volume >= ind.avgVolume20 * 0.8
+            let volOk      = volCandle.volume >= ind.avgVolume20 * 0.8
             let rsiOk      = ind.rsi > 50 && ind.rsi < 72
 
-            if aligned && priceAbove && volOk && rsiOk {
+            if aligned && priceAbove && volOk && rsiOk && confluence >= 2 {
                 if ind.ema9 > prevEma9Last {
                     let freshCross = prevEma21Last <= prevEma50Last && ind.ema21 > ind.ema50
                     let isStrong   = freshCross || (volRatio >= 2.0 && ind.rsi > 55)
@@ -227,7 +231,7 @@ enum StrategyScanner {
             }
             let inRetestZone = price >= resistanceLevel * 0.985 &&
                                price <= resistanceLevel * 1.025
-            let retestVol    = lastCandle.volume < ind.avgVolume20 * 1.5
+            let retestVol    = volCandle.volume < ind.avgVolume20 * 1.5
             let bullishCandle = lastCandle.close > lastCandle.open
 
             if breakoutOccurred && inRetestZone && retestVol && bullishCandle,
@@ -256,7 +260,7 @@ enum StrategyScanner {
             let ema50Touch = price >= ind.ema50 * 0.985 && price <= ind.ema50 * 1.015
             let bullCandle = lastCandle.close > lastCandle.open &&
                              (lastCandle.close - lastCandle.open) / lastCandle.open > 0.003
-            let volOk = lastCandle.volume >= ind.avgVolume20 * 0.8
+            let volOk = volCandle.volume >= ind.avgVolume20 * 0.8
 
             if inUptrend && (ema21Touch || ema50Touch) && bullCandle && volOk,
                ind.rsi > 38, ind.rsi < 60,
@@ -283,7 +287,7 @@ enum StrategyScanner {
             let c2_emaAlign   = ind.ema9 > ind.ema21 && ind.ema21 > ind.ema50
             let c3_rsi        = ind.rsi > 52 && ind.rsi < 68
             let c4_macd       = ind.macdLine > 0 && ind.macdHistogram > 0
-            let c5_volume     = lastCandle.volume > ind.avgVolume20 * 1.2
+            let c5_volume     = volCandle.volume > ind.avgVolume20 * 1.2
 
             let conditionCount = [c1_supertrend, c2_emaAlign, c3_rsi, c4_macd, c5_volume]
                 .filter { $0 }.count
@@ -367,7 +371,7 @@ enum StrategyScanner {
             let yearHigh = candles.suffix(lookback).dropLast().map(\.high).max() ?? 0
             if yearHigh > 0,
                price > yearHigh * 1.002,
-               lastCandle.volume > ind.avgVolume20 * 1.5,
+               volCandle.volume > ind.avgVolume20 * 1.5,
                ind.rsi > 55, ind.rsi < 78,
                price > ind.ema21,
                price > ind.ema50 {
@@ -397,7 +401,7 @@ enum StrategyScanner {
             let prior20High = candles.suffix(21).dropLast().map(\.high).max() ?? 0
             let breakingOut = price > prior20High * 1.002
 
-            let explosionVol = lastCandle.volume > ind.avgVolume20 * 3.0
+            let explosionVol = volCandle.volume > ind.avgVolume20 * 3.0
             let inUptrend    = price > ind.ema21 && price > ind.ema50
             let rsiOk        = ind.rsi > 52 && ind.rsi < 75
             let macdOk       = ind.macdHistogram > 0

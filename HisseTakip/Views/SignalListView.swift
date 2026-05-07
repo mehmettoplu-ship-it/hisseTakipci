@@ -57,44 +57,11 @@ struct SignalListView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Gruplama picker
-                Picker("Gruplama", selection: $groupMode) {
-                    ForEach(GroupMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                controlsRow
+                if filterTimeframe != nil || filterStrength != nil {
+                    activeFiltersRow
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                .pickerStyle(.segmented)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
-
-                HStack(spacing: 10) {
-                    Button {
-                        withAnimation(.spring(response: 0.3)) { onlyHighScore.toggle() }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "trophy.fill")
-                                .font(.system(size: 10, weight: .semibold))
-                            Text(onlyHighScore ? "A+B Aktif" : "A+B Göster")
-                                .font(.system(size: 12, weight: .semibold))
-                        }
-                        .foregroundStyle(onlyHighScore ? .white : Color(red: 0.2, green: 0.5, blue: 1.0))
-                        .padding(.horizontal, 12).padding(.vertical, 6)
-                        .background(
-                            onlyHighScore
-                                ? Color(red: 0.2, green: 0.5, blue: 1.0)
-                                : Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.1)
-                        )
-                        .clipShape(Capsule())
-                    }
-                    .animation(.spring(response: 0.3), value: onlyHighScore)
-
-                    Spacer()
-
-                    Text("\(stockGroups.count) hisse")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 6)
-
                 Divider().opacity(0.4)
 
                 if vm.signals.isEmpty {
@@ -112,6 +79,116 @@ struct SignalListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) { filterMenu }
             }
+        }
+    }
+
+    // MARK: - Üst Kontroller
+
+    private var controlsRow: some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 4) {
+                ForEach(GroupMode.allCases, id: \.self) { mode in
+                    let sel = groupMode == mode
+                    Button { groupMode = mode } label: {
+                        Text(mode.rawValue)
+                            .font(.system(size: 13, weight: .bold))
+                            .padding(.vertical, 9)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                sel
+                                    ? LinearGradient(
+                                        colors: [Color(red: 0.2, green: 0.5, blue: 1.0),
+                                                 Color(red: 0.1, green: 0.3, blue: 0.9)],
+                                        startPoint: .topLeading, endPoint: .bottomTrailing)
+                                    : LinearGradient(
+                                        colors: [Color(.tertiarySystemFill), Color(.tertiarySystemFill)],
+                                        startPoint: .leading, endPoint: .trailing)
+                            )
+                            .foregroundStyle(sel ? .white : .secondary)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                            .shadow(color: sel ? Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.35) : .clear,
+                                    radius: 6, y: 3)
+                    }
+                    .buttonStyle(.plain)
+                    .animation(.spring(response: 0.3), value: sel)
+                }
+            }
+
+            Spacer()
+
+            Text("\(stockGroups.count) hisse")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(.secondary)
+
+            Button {
+                withAnimation(.spring(response: 0.3)) { onlyHighScore.toggle() }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text("A+B")
+                        .font(.system(size: 12, weight: .bold))
+                }
+                .foregroundStyle(onlyHighScore ? .white : Color(red: 1.0, green: 0.75, blue: 0.0))
+                .padding(.horizontal, 10).padding(.vertical, 7)
+                .background(
+                    onlyHighScore
+                        ? Color(red: 1.0, green: 0.75, blue: 0.0)
+                        : Color(red: 1.0, green: 0.75, blue: 0.0).opacity(0.1)
+                )
+                .clipShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .animation(.spring(response: 0.3), value: onlyHighScore)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private var activeFiltersRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                if let tf = filterTimeframe {
+                    activeFilterChip(label: tf.displayName, systemImage: "calendar") {
+                        withAnimation(.spring(response: 0.3)) { filterTimeframe = nil }
+                    }
+                }
+                if let fs = filterStrength {
+                    activeFilterChip(label: strengthLabel(fs), systemImage: "bolt.fill") {
+                        withAnimation(.spring(response: 0.3)) { filterStrength = nil }
+                    }
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+        }
+        .background(Color(.tertiarySystemBackground).opacity(0.6))
+    }
+
+    private func activeFilterChip(label: String, systemImage: String, onRemove: @escaping () -> Void) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: systemImage)
+                .font(.system(size: 9, weight: .semibold))
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+            Button(action: onRemove) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .buttonStyle(.plain)
+        }
+        .foregroundStyle(Color(red: 0.2, green: 0.5, blue: 1.0))
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.1))
+        .overlay(Capsule().strokeBorder(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.3), lineWidth: 1))
+        .clipShape(Capsule())
+    }
+
+    private func strengthLabel(_ s: SignalStrength) -> String {
+        switch s {
+        case .strong:   return "Güçlü"
+        case .moderate: return "Orta"
+        case .weak:     return "Zayıf"
         }
     }
 

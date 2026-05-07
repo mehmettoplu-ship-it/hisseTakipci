@@ -15,6 +15,7 @@ struct SettingsView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {
+                    appHeaderCard
                     scanSection
                     notificationSection
                     strategySection
@@ -28,6 +29,58 @@ struct SettingsView: View {
             .navigationTitle("Ayarlar")
             .navigationBarTitleDisplayMode(.large)
         }
+    }
+
+    // MARK: - Uygulama Başlığı
+
+    private var appHeaderCard: some View {
+        ZStack(alignment: .leading) {
+            RoundedRectangle(cornerRadius: 24)
+                .fill(LinearGradient(
+                    colors: [Color(red: 0.14, green: 0.28, blue: 0.78),
+                             Color(red: 0.06, green: 0.12, blue: 0.48)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                ))
+
+            Circle()
+                .fill(Color.white.opacity(0.07))
+                .frame(width: 140, height: 140).blur(radius: 28)
+                .offset(x: 220, y: -20).allowsHitTesting(false)
+            Circle()
+                .fill(Color.white.opacity(0.05))
+                .frame(width: 90, height: 90).blur(radius: 18)
+                .offset(x: -20, y: 40).allowsHitTesting(false)
+
+            HStack(spacing: 16) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(Color.white.opacity(0.18))
+                        .frame(width: 60, height: 60)
+                    Image(systemName: "chart.xyaxis.line")
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Hisse Takip")
+                        .font(.system(size: 22, weight: .black))
+                        .foregroundStyle(.white)
+                    Text("Akıllı BIST Tarayıcı")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.7))
+                    Text("v1.0.0")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(.white.opacity(0.15))
+                        .clipShape(Capsule())
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .frame(height: 118)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .shadow(color: Color(red: 0.14, green: 0.28, blue: 0.78).opacity(0.45), radius: 20, y: 8)
     }
 
     // MARK: - Tarama

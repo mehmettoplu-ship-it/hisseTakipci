@@ -41,6 +41,8 @@ struct ContentView: View {
                 .tabItem { Label("Ayarlar", systemImage: "gearshape") }
                 .tag(6)
         }
+        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
         .preferredColorScheme(.dark)
         .task {
             await NotificationManager.shared.requestPermission()
