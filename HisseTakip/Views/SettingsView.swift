@@ -2,87 +2,274 @@ import SwiftUI
 import UIKit
 
 struct SettingsView: View {
-    // Genel
-    @AppStorage("scanOnLaunch")          private var scanOnLaunch          = false
-    @AppStorage("notificationsEnabled")  private var notificationsEnabled  = true
-    @AppStorage("onlyStrongAlert")       private var onlyStrongAlert       = false
-    @AppStorage("minRSIFilter")          private var minRSIFilter: Double  = 0
-    @AppStorage("maxRSIFilter")          private var maxRSIFilter: Double  = 100
-
-    // Otomatik Tarama
+    @AppStorage("scanOnLaunch")            private var scanOnLaunch          = false
+    @AppStorage("notificationsEnabled")    private var notificationsEnabled  = true
+    @AppStorage("onlyStrongAlert")         private var onlyStrongAlert       = false
+    @AppStorage("minRSIFilter")            private var minRSIFilter: Double  = 0
+    @AppStorage("maxRSIFilter")            private var maxRSIFilter: Double  = 100
     @AppStorage("autoScanIntervalMinutes") private var autoScanInterval: Int = 15
 
     private let intervalOptions = [5, 10, 15, 30, 60]
 
     var body: some View {
         NavigationStack {
-            Form {
-                // MARK: - Tarama
-                Section("Tarama") {
-                    Toggle("Açılışta otomatik tara", isOn: $scanOnLaunch)
-
-                    Picker("Arka plan tarama süresi", selection: $autoScanInterval) {
-                        ForEach(intervalOptions, id: \.self) { min in
-                            Text("\(min) dakika").tag(min)
-                        }
-                    }
-
-                    HStack {
-                        Text("RSI filtresi")
-                        Spacer()
-                        Text("\(Int(minRSIFilter)) – \(Int(maxRSIFilter))")
-                            .foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Text("\(Int(minRSIFilter))").font(.caption).frame(width: 28)
-                        Slider(value: $minRSIFilter, in: 0...50, step: 5)
-                        Text("Alt").font(.caption).foregroundStyle(.secondary)
-                    }
-                    HStack {
-                        Text("\(Int(maxRSIFilter))").font(.caption).frame(width: 28)
-                        Slider(value: $maxRSIFilter, in: 50...100, step: 5)
-                        Text("Üst").font(.caption).foregroundStyle(.secondary)
-                    }
+            ScrollView {
+                VStack(spacing: 20) {
+                    scanSection
+                    notificationSection
+                    strategySection
+                    aboutSection
                 }
-
-                // MARK: - Bildirimler
-                Section("Bildirimler") {
-                    Toggle("Bildirimleri Etkinleştir", isOn: $notificationsEnabled)
-
-                    if notificationsEnabled {
-                        Toggle("Sadece güçlü sinyaller", isOn: $onlyStrongAlert)
-                    }
-
-                    Button {
-                        if let url = URL(string: UIApplication.openSettingsURLString) {
-                            UIApplication.shared.open(url)
-                        }
-                    } label: {
-                        Label("Sistem Bildirim Ayarları", systemImage: "gear.badge")
-                            .foregroundStyle(.secondary)
-                    }
-                }
-
-                // MARK: - Stratejiler
-                Section("Stratejiler") {
-                    ForEach(SignalType.allCases, id: \.self) { type in
-                        StrategyToggleRow(type: type)
-                    }
-                }
-
-                // MARK: - Hakkında
-                Section("Hakkında") {
-                    LabeledContent("Versiyon", value: "1.0.0")
-                    LabeledContent("Veri Kaynağı", value: "Yahoo Finance")
-                    LabeledContent("Geliştirici", value: "Mehmet Toplu")
-                    Text("Bu uygulama yatırım tavsiyesi değildir. Tüm kararlar kullanıcıya aittir.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
             }
+            .background(Color(.systemBackground))
             .navigationTitle("Ayarlar")
+            .navigationBarTitleDisplayMode(.large)
         }
     }
+
+    // MARK: - Tarama
+
+    private var scanSection: some View {
+        settingsCard(header: "Tarama", icon: "scope") {
+            settingsRow(icon: "power", iconColor: Color(red: 0.1, green: 0.85, blue: 0.55)) {
+                Toggle("Açılışta otomatik tara", isOn: $scanOnLaunch)
+                    .tint(Color(red: 0.1, green: 0.85, blue: 0.55))
+            }
+            rowDivider
+            intervalPickerRow
+            rowDivider
+            rsiFilterRow
+        }
+    }
+
+    private var intervalPickerRow: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 12) {
+                iconBox("timer", color: Color(red: 0.2, green: 0.5, blue: 1.0))
+                Text("Arka plan tarama aralığı")
+                    .font(.system(size: 15, weight: .medium))
+            }
+            HStack(spacing: 6) {
+                ForEach(intervalOptions, id: \.self) { min in
+                    let selected = autoScanInterval == min
+                    Button { autoScanInterval = min } label: {
+                        Text("\(min)d")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(selected ? .white : Color(red: 0.2, green: 0.5, blue: 1.0))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                            .background(
+                                selected
+                                    ? Color(red: 0.2, green: 0.5, blue: 1.0)
+                                    : Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.1)
+                            )
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .animation(.spring(response: 0.25), value: selected)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+    }
+
+    private var rsiFilterRow: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                iconBox("waveform.path.ecg", color: Color(red: 1.0, green: 0.62, blue: 0.0))
+                Text("RSI Filtresi")
+                    .font(.system(size: 15, weight: .medium))
+                Spacer()
+                Text("\(Int(minRSIFilter)) – \(Int(maxRSIFilter))")
+                    .font(.system(size: 13, weight: .bold, design: .monospaced))
+                    .foregroundStyle(Color(red: 1.0, green: 0.62, blue: 0.0))
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Color(red: 1.0, green: 0.62, blue: 0.0).opacity(0.1))
+                    .clipShape(Capsule())
+            }
+            VStack(spacing: 8) {
+                sliderRow("Alt", value: $minRSIFilter, range: 0...50,
+                          color: Color(red: 0.2, green: 0.5, blue: 1.0))
+                sliderRow("Üst", value: $maxRSIFilter, range: 50...100,
+                          color: Color(red: 0.1, green: 0.85, blue: 0.55))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
+    }
+
+    // MARK: - Bildirimler
+
+    private var notificationSection: some View {
+        settingsCard(header: "Bildirimler", icon: "bell.fill") {
+            settingsRow(icon: "bell.badge.fill", iconColor: Color(red: 1.0, green: 0.28, blue: 0.32)) {
+                Toggle("Bildirimleri Etkinleştir", isOn: $notificationsEnabled)
+                    .tint(Color(red: 0.1, green: 0.85, blue: 0.55))
+            }
+            if notificationsEnabled {
+                rowDivider
+                settingsRow(icon: "bolt.fill", iconColor: Color(red: 1.0, green: 0.62, blue: 0.0)) {
+                    Toggle("Sadece güçlü sinyaller", isOn: $onlyStrongAlert)
+                        .tint(Color(red: 1.0, green: 0.62, blue: 0.0))
+                }
+            }
+            rowDivider
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    iconBox("gear.badge", color: Color(.secondaryLabel))
+                    Text("Sistem Bildirim Ayarları")
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Image(systemName: "arrow.up.forward.app")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Stratejiler
+
+    private var strategySection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader("Stratejiler", icon: "chart.xyaxis.line")
+            VStack(spacing: 0) {
+                ForEach(Array(SignalType.allCases.enumerated()), id: \.element) { idx, type in
+                    if idx > 0 { rowDivider }
+                    StrategyToggleRow(type: type)
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color(.secondarySystemBackground))
+            )
+        }
+    }
+
+    // MARK: - Hakkında
+
+    private var aboutSection: some View {
+        settingsCard(header: "Hakkında", icon: "info.circle.fill") {
+            infoRow(icon: "tag.fill",
+                    iconColor: Color(red: 0.2, green: 0.5, blue: 1.0),
+                    label: "Versiyon", value: "1.0.0")
+            rowDivider
+            infoRow(icon: "chart.line.uptrend.xyaxis",
+                    iconColor: Color(red: 1.0, green: 0.62, blue: 0.0),
+                    label: "Veri Kaynağı", value: "Yahoo Finance")
+            rowDivider
+            infoRow(icon: "person.fill",
+                    iconColor: Color(red: 0.1, green: 0.85, blue: 0.55),
+                    label: "Geliştirici", value: "Mehmet Toplu")
+            rowDivider
+            Text("Bu uygulama yatırım tavsiyesi değildir.\nTüm kararlar kullanıcıya aittir.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+        }
+    }
+
+    // MARK: - Builders
+
+    @ViewBuilder
+    private func settingsCard<Content: View>(
+        header: String,
+        icon: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            sectionHeader(header, icon: icon)
+            VStack(spacing: 0) {
+                content()
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 18)
+                    .fill(Color(.secondarySystemBackground))
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func settingsRow<Control: View>(
+        icon: String,
+        iconColor: Color,
+        @ViewBuilder control: () -> Control
+    ) -> some View {
+        HStack(spacing: 12) {
+            iconBox(icon, color: iconColor)
+            control()
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+    }
+
+    private func sectionHeader(_ title: String, icon: String) -> some View {
+        Label(title, systemImage: icon)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 4)
+    }
+
+    private func iconBox(_ systemName: String, color: Color) -> some View {
+        Image(systemName: systemName)
+            .font(.system(size: 14, weight: .semibold))
+            .foregroundStyle(color)
+            .frame(width: 28, height: 28)
+            .background(color.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 7))
+    }
+
+    private func sliderRow(_ label: String, value: Binding<Double>,
+                           range: ClosedRange<Double>, color: Color) -> some View {
+        HStack(spacing: 8) {
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(width: 24, alignment: .leading)
+            Slider(value: value, in: range, step: 5)
+                .tint(color)
+            Text("\(Int(value.wrappedValue))")
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(color)
+                .frame(width: 28, alignment: .trailing)
+        }
+    }
+
+    private func infoRow(icon: String, iconColor: Color, label: String, value: String) -> some View {
+        HStack(spacing: 12) {
+            iconBox(icon, color: iconColor)
+            Text(label)
+                .font(.system(size: 15, weight: .medium))
+            Spacer()
+            Text(value)
+                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 13)
+    }
+
+    private var rowDivider: some View {
+        Divider().padding(.leading, 54)
+    }
 }
+
+// MARK: - Strateji Satırı
 
 private struct StrategyToggleRow: View {
     let type: SignalType
@@ -95,24 +282,34 @@ private struct StrategyToggleRow: View {
     }
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
+            Text(type.emoji)
+                .font(.system(size: 16))
+                .frame(width: 28, height: 28)
+                .background(Color(.tertiarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 7))
             Toggle(isOn: $isEnabled) {
-                Text(type.emoji + " " + type.rawValue)
+                Text(type.rawValue)
+                    .font(.system(size: 15, weight: .medium))
+                    .lineLimit(1)
             }
-            Button {
-                showDetail = true
-            } label: {
+            .tint(Color(red: 0.1, green: 0.85, blue: 0.55))
+            Button { showDetail = true } label: {
                 Image(systemName: "info.circle")
-                    .foregroundStyle(.secondary)
-                    .font(.system(size: 17))
+                    .foregroundStyle(Color(red: 0.2, green: 0.5, blue: 1.0).opacity(0.75))
+                    .font(.system(size: 16))
             }
             .buttonStyle(.plain)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 11)
         .sheet(isPresented: $showDetail) {
             StrategyDetailView(type: type)
         }
     }
 }
+
+// MARK: - Strateji Detay
 
 private struct StrategyDetailView: View {
     let type: SignalType
@@ -129,7 +326,6 @@ private struct StrategyDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
 
-                    // Başlık kartı
                     VStack(spacing: 10) {
                         Text(type.emoji)
                             .font(.system(size: 52))
@@ -152,7 +348,6 @@ private struct StrategyDetailView: View {
 
                     Divider()
 
-                    // Koşullar
                     infoSection(title: "Tetiklenme Koşulları", icon: "checklist") {
                         VStack(alignment: .leading, spacing: 8) {
                             ForEach(Array(type.conditionsList.enumerated()), id: \.offset) { _, cond in
@@ -168,14 +363,12 @@ private struct StrategyDetailView: View {
                         }
                     }
 
-                    // Mantık
                     infoSection(title: "Strateji Mantığı", icon: "brain.fill") {
                         Text(type.strategyLogic)
                             .font(.subheadline)
                             .lineSpacing(4)
                     }
 
-                    // Güçlü sinyal kriterleri
                     infoSection(title: "Güçlü Sinyal Kriteri", icon: "bolt.fill") {
                         Text(type.strongSignalCriteria)
                             .font(.subheadline)

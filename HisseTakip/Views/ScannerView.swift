@@ -2,8 +2,10 @@ import SwiftUI
 
 struct ScannerView: View {
     @EnvironmentObject private var vm: ScannerViewModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedStrategy: SignalType? = nil
     @State private var showFailedSheet = false
+    @State private var backgroundedDuringScan = false
 
     var body: some View {
         NavigationStack {
@@ -49,6 +51,10 @@ struct ScannerView: View {
             .sheet(isPresented: $showFailedSheet) {
                 FailedStocksSheet()
                     .environmentObject(vm)
+            }
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .background && vm.isScanning { backgroundedDuringScan = true }
+                if newPhase == .active && !vm.isScanning   { backgroundedDuringScan = false }
             }
         }
     }
@@ -132,6 +138,21 @@ struct ScannerView: View {
 
     private var scanningView: some View {
         VStack(spacing: 20) {
+            // Arka plan göstergesi
+            if backgroundedDuringScan {
+                HStack(spacing: 6) {
+                    Image(systemName: "moon.fill")
+                        .font(.system(size: 10))
+                    Text("Arka planda devam ediyor")
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 12).padding(.vertical, 6)
+                .background(Color(.tertiarySystemBackground))
+                .clipShape(Capsule())
+                .transition(.scale.combined(with: .opacity))
+            }
+
             ZStack {
                 Circle()
                     .stroke(Color(.systemGray5), lineWidth: 5)
@@ -165,8 +186,7 @@ struct ScannerView: View {
 
                 if let sym = vm.currentSymbol {
                     HStack(spacing: 6) {
-                        ProgressView()
-                            .scaleEffect(0.7)
+                        ProgressView().scaleEffect(0.7)
                         Text(sym)
                             .font(.system(size: 13, weight: .semibold, design: .monospaced))
                             .foregroundStyle(.secondary)
@@ -179,12 +199,27 @@ struct ScannerView: View {
                         .foregroundStyle(.secondary)
                 }
 
+                // Canlı sinyal sayacı
+                if vm.liveSignalCount > 0 {
+                    HStack(spacing: 5) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.1, green: 0.85, blue: 0.55))
+                        Text("\(vm.liveSignalCount) sinyal bulundu")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.1, green: 0.85, blue: 0.55))
+                            .contentTransition(.numericText())
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 5)
+                    .background(Color(red: 0.1, green: 0.85, blue: 0.55).opacity(0.1))
+                    .clipShape(Capsule())
+                    .animation(.spring(response: 0.4), value: vm.liveSignalCount)
+                }
+
                 if vm.fetchErrors > 0 {
                     HStack(spacing: 4) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.caption2)
-                        Text("\(vm.fetchErrors) hisse verisi alınamadı")
-                            .font(.caption)
+                        Image(systemName: "exclamationmark.triangle.fill").font(.caption2)
+                        Text("\(vm.fetchErrors) hisse verisi alınamadı").font(.caption)
                     }
                     .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.1))
                     .padding(.horizontal, 10).padding(.vertical, 5)
@@ -193,6 +228,7 @@ struct ScannerView: View {
                 }
             }
         }
+        .animation(.spring(response: 0.4), value: backgroundedDuringScan)
     }
 
     // MARK: - Sonuçlar

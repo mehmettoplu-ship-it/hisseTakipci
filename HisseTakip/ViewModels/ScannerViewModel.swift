@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import UIKit
 
 struct FailedStock: Identifiable {
     let id   = UUID()
@@ -21,9 +22,11 @@ final class ScannerViewModel: ObservableObject {
     @Published var fetchErrors: Int      = 0
     @Published var scanDuration: TimeInterval? = nil
     @Published var failedStocks: [FailedStock] = []
+    @Published var liveSignalCount: Int  = 0
 
     private var scanTask: Task<Void, Never>?
     private var autoScanTask: Task<Void, Never>?
+    private var bgTaskID: UIBackgroundTaskIdentifier = .invalid
 
     private var autoScanIntervalSeconds: TimeInterval {
         let v = UserDefaults.standard.integer(forKey: "autoScanIntervalMinutes")
@@ -84,12 +87,31 @@ final class ScannerViewModel: ObservableObject {
     func startScan() {
         guard !isScanning else { return }
         scanTask?.cancel()
-        scanTask = Task { await performScan() }
+
+        // Arka plan çalışma süresi talep et — uygulama arka plana geçse de tarama devam eder
+        UIApplication.shared.isIdleTimerDisabled = true
+        bgTaskID = UIApplication.shared.beginBackgroundTask(withName: "hissetakip.scan") { [weak self] in
+            // iOS süreyi keseceği zaman buraya gelir; kısmi sonuçları koru
+            self?.finishBackgroundTask()
+        }
+
+        scanTask = Task {
+            await performScan()
+            finishBackgroundTask()
+        }
     }
 
     func cancelScan() {
         scanTask?.cancel()
+        finishBackgroundTask()
         isScanning = false
+    }
+
+    private func finishBackgroundTask() {
+        UIApplication.shared.isIdleTimerDisabled = false
+        guard bgTaskID != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(bgTaskID)
+        bgTaskID = .invalid
     }
 
     // MARK: - Arka Plan Tarama
@@ -152,14 +174,15 @@ final class ScannerViewModel: ObservableObject {
     // MARK: - Ana Tarama
 
     private func performScan() async {
-        isScanning     = true
-        progress       = 0
-        scannedCount   = 0
-        fetchErrors    = 0
-        failedStocks   = []
-        errorMessage   = nil
-        currentSymbol  = nil
-        let scanStart  = Date()
+        isScanning      = true
+        progress        = 0
+        scannedCount    = 0
+        fetchErrors     = 0
+        liveSignalCount = 0
+        failedStocks    = []
+        errorMessage    = nil
+        currentSymbol   = nil
+        let scanStart   = Date()
 
         let previousSignals = signals
         let hadPreviousScan = lastScanDate != nil
@@ -204,6 +227,7 @@ final class ScannerViewModel: ObservableObject {
                 }
                 for await (partialSignals, failed) in group {
                     newSignals.append(contentsOf: partialSignals)
+                    liveSignalCount += partialSignals.count
                     if let f = failed {
                         fetchErrors  += 1
                         failedStocks.append(f)
