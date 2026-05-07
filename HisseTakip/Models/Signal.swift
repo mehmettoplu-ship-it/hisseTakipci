@@ -14,8 +14,9 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
     case trendPullback      = "Trend Desteği"
     case smartMomentum      = "Akıllı Momentum"
     case candlePattern      = "Mum Formasyonu"
-    case weeklyBreakout     = "52 Hafta Zirvesi"
-    case vcpBreakout        = "VCP Kırılması"
+    case weeklyBreakout       = "52 Hafta Zirvesi"
+    case vcpBreakout          = "VCP Kırılması"
+    case descendingBreakout   = "Düşen Trend Kırılması"
 
     var emoji: String {
         switch self {
@@ -31,8 +32,9 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .trendPullback:      return "↩️"
         case .smartMomentum:      return "🧠"
         case .candlePattern:      return "🕯️"
-        case .weeklyBreakout:     return "📈"
-        case .vcpBreakout:        return "💎"
+        case .weeklyBreakout:       return "📈"
+        case .vcpBreakout:          return "💎"
+        case .descendingBreakout:   return "🔺"
         }
     }
 
@@ -50,8 +52,9 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .trendPullback:      return "strategy_trendPullback"
         case .smartMomentum:      return "strategy_smartMomentum"
         case .candlePattern:      return "strategy_candlePattern"
-        case .weeklyBreakout:     return "strategy_weeklyBreakout"
-        case .vcpBreakout:        return "strategy_vcpBreakout"
+        case .weeklyBreakout:       return "strategy_weeklyBreakout"
+        case .vcpBreakout:          return "strategy_vcpBreakout"
+        case .descendingBreakout:   return "strategy_descendingBreakout"
         }
     }
 }
@@ -63,7 +66,7 @@ extension SignalType {
     var shortDescription: String {
         switch self {
         case .resistanceBreakout: return "20 günlük zirveyi güçlü hacimle kıran hisseleri tespit eder."
-        case .oversoldReversal:   return "RSI 28 altından dönen ve MACD'nin de teyit ettiği dipleri yakalar."
+        case .oversoldReversal:   return "RSI 30 altından dönen, boğa mumu + hacim + MACD üçlü teyidiyle dip dönüşlerini yakalar."
         case .emaBullishCross:    return "EMA9'un EMA21'i yukarı kesmesiyle tetiklenen kısa vadeli momentum dönüşü."
         case .goldenCross:        return "EMA21'in EMA50'yi yukarı kesmesi — orta vadeli trend değişikliğinin en güvenilir işareti."
         case .bollingerBounce:    return "Bollinger alt bandına dokunan ve boğa mumu ile dönen hisseleri tespit eder."
@@ -75,7 +78,8 @@ extension SignalType {
         case .smartMomentum:      return "5 bağımsız sistemin hepsinin aynı anda boğa sinyali verdiği anları yakalar. En seçici strateji."
         case .candlePattern:      return "Destek bölgesinde oluşan Hammer (Çekiç) veya Bullish Engulfing (Boğa Yutma) formasyonunu tespit eder."
         case .weeklyBreakout:     return "52 haftalık (1 yıllık) en yüksek seviyeyi hacim onayıyla kıran hisseleri tespit eder. Kurumsal yatırımcıların en çok izlediği direnç seviyesi."
-        case .vcpBreakout:        return "Sıkışma + hacim kuruması + patlama: Minervini'nin VCP (Volatility Contraction Pattern) stratejisi. En kaliteli, en nadir sinyal."
+        case .vcpBreakout:          return "Sıkışma + hacim kuruması + patlama: Minervini'nin VCP (Volatility Contraction Pattern) stratejisi. En kaliteli, en nadir sinyal."
+        case .descendingBreakout:   return "Son 30 mumda oluşan alçalan direnç çizgisini hacim ve MACD onayıyla yukarı kıran hisseleri tespit eder. Ayı trendinin erken sona erme sinyali."
         }
     }
 
@@ -87,9 +91,12 @@ extension SignalType {
                     "RSI 42–68 arasında (aşırı alım yok)",
                     "Confluence skoru ≥ 2/5"]
         case .oversoldReversal:
-            return ["Önceki mumda RSI 28'in altında (derin aşırı satım)",
-                    "Son mumda RSI tekrar 28'in üzerine çıktı (dönüş)",
+            return ["Önceki mumda RSI 30'un altında (aşırı satım bölgesi)",
+                    "Son mumda RSI tekrar 30'un üzerine çıktı (dönüş başladı)",
                     "MACD histogramı: önceki mumda negatif, son mumda pozitif",
+                    "Dönüş günü boğa mumu: kapanış > açılış (alıcılar hakim)",
+                    "Hacim ≥ ortalama × 0.7 (minimum katılım var)",
+                    "Fiyat EMA50'nin en az %72'si üzerinde (serbest düşüş değil)",
                     "Confluence skoru ≥ 2/5"]
         case .emaBullishCross:
             return ["Önceki mumda EMA9 < EMA21, son mumda EMA9 > EMA21 (taze kesişim)",
@@ -160,6 +167,14 @@ extension SignalType {
                     "Fiyat EMA21 VE EMA50 üzerinde (sağlam uptrend)",
                     "RSI 52–75 arası, MACD histogramı pozitif",
                     "Confluence skoru ≥ 3/5 (diğer stratejilerden daha katı)"]
+        case .descendingBreakout:
+            return ["Son 30 mumda en az 2 azalan pivot yüksek tespit edildi (alçalan direnç çizgisi)",
+                    "Pivot yüksekler arası fark ≥ %1 (gerçek düşüş trendi)",
+                    "Fiyat hesaplanan trendline'ın %0.5+ üzerinde kapandı",
+                    "Önceki mum trendline altındaydı (taze kırılma — eski değil)",
+                    "Hacim ≥ ortalama × 1.3 (kırılma hacim onaylı)",
+                    "RSI 35–62 arası (toparlanıyor, aşırı alım yok)",
+                    "MACD pozitif veya yükseliyor, Confluence ≥ 2/5"]
         }
     }
 
@@ -168,7 +183,7 @@ extension SignalType {
         case .resistanceBreakout:
             return "Direnç kırılması gerçekse yüksek hacimle desteklenir. Düşük hacimli kırılmalar genellikle başarısız olup geri döner. 2x hacim şartı sahte kırılmaları filtreler, RSI üst sınırı ise aşırı alınmış hisseleri dışarıda bırakır."
         case .oversoldReversal:
-            return "Tek başına RSI'nın 30 altına girmesi yeterli değildir — hisse daha da düşebilir. Bu strateji RSI dönüşünü VE MACD teyidini birden bekler. İki bağımsız göstergenin aynı anda dönüş sinyali vermesi güvenilirliği önemli ölçüde artırır."
+            return "Tek başına RSI'nın 30 altına girmesi yeterli değildir — hisse daha da düşebilir. Bu strateji RSI dönüşünü, MACD teyidini, boğa mumunu ve minimum hacim katılımını birden bekler. Dönüş gününün yeşil kapanması alıcıların sahaya çıktığını, EMA50 mesafe filtresi ise kopuk bir trendin değil düzeltilebilir bir aşırı satımın sinyali olduğunu garanti eder."
         case .emaBullishCross:
             return "EMA9/21 kesişimi kısa vadeli momentumun döndüğünü gösterir. Fiyatın EMA50 üzerinde olması şartı, bu kesişimin yükselen ana trend içinde gerçekleştiğini teyit eder. Trende karşı kesişimler çok daha az güvenilirdir."
         case .goldenCross:
@@ -193,13 +208,15 @@ extension SignalType {
             return "52 haftalık zirve yalnızca teknik bir seviye değil, psikolojik bir engel. Bir yıldır bu seviyenin üzerine çıkamayan hisse aniden büyük hacimle geçiyorsa kurumsal alıcılar devreye girmiş demektir. Mark Minervini ve IBD (Investor's Business Daily) bu formasyonu 'Stage 2 Breakout' olarak tanımlar ve tarihin en büyük rallilerinin büyük çoğunluğu bu kalıpla başlamıştır."
         case .vcpBreakout:
             return "Minervini'nin VCP metodolojisi: her sıkışma dönemi kurumların sessizce birikim yaptığı zamandır. Hacim kuruyorsa satıcılar tükeniyor demektir. Sıkışmanın ardından 3x+ hacimli patlama = akıllı para alımı. Bu kombinasyonun sinyali çok nadiren tetiklenir ama tetiklendiğinde harekete geçmeye değer."
+        case .descendingBreakout:
+            return "Düşen trendde her mum bir öncekinin zirvesini geçemez — bu 'alçalan direnç' çizgisi oluşturur. Fiyat bu çizgiyi hacimle geçtiğinde satıcıların tükendiğini ve alıcıların kontrolü devraldığını gösterir. RSI'nın 35+ olması bazı alıcıların zaten harekete geçtiğini, MACD teyidi ise momentumun döndüğünü teyit eder. Bu strateji ayı trendinin erken kırıldığı anı yakalar."
         }
     }
 
     var strongSignalCriteria: String {
         switch self {
         case .resistanceBreakout: return "Hacim 3x veya daha fazlaysa Güçlü, 2–3x arası Orta."
-        case .oversoldReversal:   return "RSI 24'ün altından döndüyse Güçlü (çok derin dip), 28'den döndüyse Orta."
+        case .oversoldReversal:   return "RSI 24'ün altından döndü VE hacim 1.2x+ ise Güçlü. Aksi halde Orta."
         case .emaBullishCross:    return "Hacim 1.5x+ VE RSI 52 üzerindeyse Güçlü, aksi halde Orta."
         case .goldenCross:        return "Hacim 1.5x+ VE RSI 52 üzerindeyse Güçlü, aksi halde Orta."
         case .bollingerBounce:    return "RSI 30'un altındaysa Güçlü (çok derin aşırı satım), 30–38 arası Orta."
@@ -211,7 +228,8 @@ extension SignalType {
         case .smartMomentum:      return "SuperTrend yeni döndü veya EMA9 hızlanıyor VE Hacim 1.5x+ → Güçlü."
         case .candlePattern:      return "Bullish Engulfing ve mum gövdesi önceki mumun 2x+ büyüklüğünde VE Hacim 1.5x+ → Güçlü. Hammer ve alt gölge > 3x gövde VE EMA50 yakınında → Güçlü."
         case .weeklyBreakout:     return "Hacim 2x+ VE RSI 60+ → Güçlü. 1.5–2x hacim ve RSI 55–60 → Orta."
-        case .vcpBreakout:        return "Hacim 4x+ VE RSI 62+ → Güçlü. 3–4x hacim arası → Orta."
+        case .vcpBreakout:          return "Hacim 4x+ VE RSI 62+ → Güçlü. 3–4x hacim arası → Orta."
+        case .descendingBreakout:   return "Hacim 2x+ VE RSI 42+ VE MACD histogramı pozitif → Güçlü. Aksi halde Orta."
         }
     }
 
@@ -230,7 +248,8 @@ extension SignalType {
         case .smartMomentum:      return "Seyrek"
         case .candlePattern:      return "Orta Sıklıkta"
         case .weeklyBreakout:     return "Seyrek"
-        case .vcpBreakout:        return "Çok Seyrek"
+        case .vcpBreakout:          return "Çok Seyrek"
+        case .descendingBreakout:   return "Orta Sıklıkta"
         }
     }
 }

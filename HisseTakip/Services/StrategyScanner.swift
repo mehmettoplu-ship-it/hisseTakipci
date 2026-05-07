@@ -57,13 +57,17 @@ enum StrategyScanner {
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.oversoldReversal) {
             let prevRSI = TechnicalAnalysis.rsi(closes: prevClosesArr)
-            if prevRSI < 28, ind.rsi >= 28, confluence >= 2 {
+            if prevRSI < 30, ind.rsi >= 30, confluence >= 2 {
                 let (_, _, prevHist) = TechnicalAnalysis.macd(closes: prevClosesArr)
                 let macdConfirmed = (prevHist.last ?? 0) < 0 && ind.macdHistogram > 0
-                if macdConfirmed {
+                let bullishDay    = lastCandle.close > lastCandle.open           // dönüş günü yeşil mum
+                let volumeOk      = volCandle.volume >= ind.avgVolume20 * 0.7    // minimum hacim katılımı
+                let notFreefall   = price >= ind.ema50 * 0.72                   // kopuk trend değil
+                if macdConfirmed && bullishDay && volumeOk && notFreefall {
+                    let isStrong = prevRSI < 24 && volRatio >= 1.2
                     signals.append(make(
                         stock: stock, type: .oversoldReversal,
-                        strength: prevRSI < 22 ? .strong : .moderate,
+                        strength: isStrong ? .strong : .moderate,
                         timeframe: timeframe, price: price, ind: ind,
                         volRatio: volRatio, dailyChange: dailyChange
                     ))
@@ -414,6 +418,61 @@ enum StrategyScanner {
                     timeframe: timeframe, price: price, ind: ind,
                     volRatio: volRatio, dailyChange: dailyChange
                 ))
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // 15. DÜŞEN TREND KIRILMASI
+        // Son 30 mumda oluşan alçalan direnç çizgisini hacim onaylı kırar
+        // Ayı trendinin sona erdiğinin erken sinyali — taze kırılma anını yakalar
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.descendingBreakout), candles.count >= 35 {
+            // Bugünkü (muhtemelen açık) bar hariç son 30 mum üzerinde çalış
+            let lookback = Array(candles.dropLast().suffix(30))
+
+            // Pivot yüksek: her iki yanındaki 2 bardan daha yüksek olan tepe
+            var pivotHighs: [(idx: Int, high: Double)] = []
+            for i in 2..<(lookback.count - 2) {
+                let h = lookback[i].high
+                if h > lookback[i-1].high && h > lookback[i-2].high &&
+                   h > lookback[i+1].high && h > lookback[i+2].high {
+                    pivotHighs.append((idx: i, high: h))
+                }
+            }
+
+            if pivotHighs.count >= 2 {
+                let h1 = pivotHighs[pivotHighs.count - 2]   // önceki pivot
+                let h2 = pivotHighs[pivotHighs.count - 1]   // son pivot
+
+                // Gerçek alçalan trend: son pivot öncekinden en az %1 düşük
+                // ve pivotlar arası en az 5 bar mesafe var
+                if h1.high > h2.high * 1.01 && (h2.idx - h1.idx) >= 5 {
+                    // Trendline eğimi ve bugünkü projeksiyonu hesapla
+                    let slope        = (h2.high - h1.high) / Double(h2.idx - h1.idx)
+                    let barsAfterH2  = lookback.count - h2.idx   // h2'den bugüne kaç bar geçti
+                    let trendlineNow = h2.high + slope * Double(barsAfterH2)
+
+                    guard trendlineNow > 0 else { return signals }
+
+                    // Önceki bar trendline altındaydı (taze kırılma, eski değil)
+                    let prevTrendline = h2.high + slope * Double(barsAfterH2 - 1)
+                    let freshBreakout = prevCandle.close <= prevTrendline * 1.01
+
+                    let breakingAbove = price > trendlineNow * 1.005     // %0.5+ üzerinde kırılma
+                    let volOk         = volCandle.volume >= ind.avgVolume20 * 1.3
+                    let rsiOk         = ind.rsi > 35 && ind.rsi < 62
+                    let macdOk        = ind.macdHistogram > 0 || ind.macdLine > ind.macdSignal
+
+                    if freshBreakout && breakingAbove && volOk && rsiOk && macdOk && confluence >= 2 {
+                        let isStrong = volRatio >= 2.0 && ind.rsi > 42 && ind.macdHistogram > 0
+                        signals.append(make(
+                            stock: stock, type: .descendingBreakout,
+                            strength: isStrong ? .strong : .moderate,
+                            timeframe: timeframe, price: price, ind: ind,
+                            volRatio: volRatio, dailyChange: dailyChange
+                        ))
+                    }
+                }
             }
         }
 
