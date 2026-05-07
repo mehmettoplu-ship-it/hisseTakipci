@@ -65,7 +65,7 @@ enum StrategyScanner {
                         stock: stock, type: .oversoldReversal,
                         strength: prevRSI < 22 ? .strong : .moderate,
                         timeframe: timeframe, price: price, ind: ind,
-                        dailyChange: dailyChange
+                        volRatio: volRatio, dailyChange: dailyChange
                     ))
                 }
             }
@@ -86,7 +86,7 @@ enum StrategyScanner {
                     stock: stock, type: .emaBullishCross,
                     strength: volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate,
                     timeframe: timeframe, price: price, ind: ind,
-                    dailyChange: dailyChange
+                    volRatio: volRatio, dailyChange: dailyChange
                 ))
             }
         }
@@ -128,7 +128,7 @@ enum StrategyScanner {
                     stock: stock, type: .bollingerBounce,
                     strength: ind.rsi < 30 ? .strong : .moderate,
                     timeframe: timeframe, price: price, ind: ind,
-                    dailyChange: dailyChange
+                    volRatio: volRatio, dailyChange: dailyChange
                 ))
             }
         }
@@ -188,7 +188,7 @@ enum StrategyScanner {
                         stock: stock, type: .rsiDivergence,
                         strength: mag >= 12 ? .strong : .moderate,
                         timeframe: timeframe, price: price, ind: ind,
-                        dailyChange: dailyChange
+                        volRatio: volRatio, dailyChange: dailyChange
                     ))
                 }
             }

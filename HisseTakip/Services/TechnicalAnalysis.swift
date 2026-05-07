@@ -134,7 +134,10 @@ enum TechnicalAnalysis {
         if ind.rsi > 40 && ind.rsi < 68 { score += 1 }           // RSI sağlıklı aralıkta
         if price > ind.ema50            { score += 1 }           // Ana trend yukarı
         if ind.macdHistogram > 0        { score += 1 }           // MACD momentumu pozitif
-        if last.volume > ind.avgVolume20 { score += 1 }          // Hacim ortalamanın üstünde
+        // Use previous complete bar for volume when today's bar is still forming
+        let volCandle = Calendar.current.isDateInToday(last.timestamp)
+            ? (candles.dropLast().last ?? last) : last
+        if volCandle.volume > ind.avgVolume20 { score += 1 }     // Hacim ortalamanın üstünde
         let sma10 = candles.suffix(10).map(\.close).reduce(0,+) / 10.0
         if price > sma10                { score += 1 }           // Kısa vadeli trend yukarı
         return score
@@ -142,7 +145,10 @@ enum TechnicalAnalysis {
 
     // MARK: - Ortalama Hacim
     static func averageVolume(candles: [Candle], period: Int = 20) -> Double {
-        let slice = candles.suffix(period).map(\.volume)
+        // Exclude current-day bar if still forming (market hours) so partial volume doesn't skew the average
+        let source = candles.last.map { Calendar.current.isDateInToday($0.timestamp) } == true
+            ? candles.dropLast() : candles
+        let slice = source.suffix(period).map(\.volume)
         guard !slice.isEmpty else { return 0 }
         return slice.reduce(0, +) / Double(slice.count)
     }
