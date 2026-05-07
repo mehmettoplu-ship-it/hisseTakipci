@@ -6,6 +6,25 @@ Güncelleme: Mayıs 2026
 ================================================================
 
 
+================================================================
+GENEL FİLTRELER (tüm stratejiler için geçerli)
+================================================================
+  MIN. LİKİDİTE:
+    20 günlük ortalama hacim 50.000 adetten az olan hisseler
+    tarama dışında bırakılır. Çok ince piyasalarda teknik
+    sinyaller güvenilir değildir.
+
+  TAMAMLANMAMIŞ BAR (seans içi):
+    Yahoo Finance günlük veride, borsa açıkken son mum henüz
+    kapanmamış bir "yarım bar"dır — hacim kısmen gerçekleşmiş.
+    Hacim karşılaştırmalarında bu bar yerine bir önceki
+    tamamlanmış bar kullanılır; böylece seans içi sahte yüksek/
+    düşük hacim sinyalleri önlenir.
+    (Not: Yahoo Finance BIST verisi 15 dakika gecikmeli.)
+
+================================================================
+
+
 ----------------------------------------------------------------
 1. 🚀 DİRENÇ KIRILMASI
 ----------------------------------------------------------------
@@ -242,6 +261,7 @@ KOŞULLAR:
   - RSI 50 ile 72 arasında (momentum bölgesinde)
   - Hacim, ortalamanın en az 0.8 katı
   - EMA9'un değeri bir önceki muma göre yükseliyor (ivme var)
+  - Confluence skoru en az 2/5
 
 GÜÇLÜ SİNYAL:
   Taze bir kesişim var (EMA21 az önce EMA50'yi geçti) VEYA
