@@ -184,8 +184,8 @@ extension SignalType {
                     "Fiyat EMA Yavaş (varsayılan 17) üzerinde",
                     "EMA Hızlı (varsayılan 2) > EMA Yavaş: kısa vadeli momentum pozitif",
                     "Taze sinyal: SuperTrend yeni boğaya döndü VEYA EMA hızlı yavazı yukarı kesti",
-                    "Hacim filtresi etkinse: hacim > ortalama × 1.2 (para girişi var)",
-                    "Parametreler: ATR periyodu, çarpan, EMA hızlı/yavaş, hacim filtresi, stop %, breakeven %"]
+                    "Hacim artışı: hacim > ortalama × çarpan (ayarlanabilir) VE önceki bardan yüksek",
+                    "Parametreler: ATR periyodu (1–30), çarpan, EMA hızlı/yavaş, hacim çarpanı, stop %, breakeven %"]
         }
     }
 

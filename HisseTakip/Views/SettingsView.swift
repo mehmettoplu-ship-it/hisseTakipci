@@ -13,7 +13,8 @@ struct SettingsView: View {
     @AppStorage("ecHFT_multiplier") private var ecHFT_multiplier: Double = 1.5
     @AppStorage("ecHFT_emaFast")    private var ecHFT_emaFast:    Int    = 2
     @AppStorage("ecHFT_emaSlow")    private var ecHFT_emaSlow:    Int    = 17
-    @AppStorage("ecHFT_volFilter")  private var ecHFT_volFilter:  Bool   = true
+    @AppStorage("ecHFT_volFilter")       private var ecHFT_volFilter:      Bool   = true
+    @AppStorage("ecHFT_volMultiplier")   private var ecHFT_volMultiplier:  Double = 1.5
     @AppStorage("ecHFT_stopPct")    private var ecHFT_stopPct:    Double = 7.0
     @AppStorage("ecHFT_bePct")      private var ecHFT_bePct:      Double = 2.5
 
@@ -231,7 +232,7 @@ struct SettingsView: View {
                 Text("ATR Periyodu")
                     .font(.system(size: 15, weight: .medium))
                 Spacer()
-                Stepper(value: $ecHFT_atrPeriod, in: 5...30) {
+                Stepper(value: $ecHFT_atrPeriod, in: 1...30) {
                     Text("\(ecHFT_atrPeriod)")
                         .font(.system(size: 14, weight: .bold, design: .monospaced))
                         .foregroundStyle(ecHFTColor)
@@ -291,8 +292,32 @@ struct SettingsView: View {
             .padding(.vertical, 13)
             rowDivider
             settingsRow(icon: "chart.bar.fill", iconColor: ecHFTColor) {
-                Toggle("Hacim Filtresi (1.2x+)", isOn: $ecHFT_volFilter)
+                Toggle("Hacim Filtresi", isOn: $ecHFT_volFilter)
                     .tint(ecHFTColor)
+            }
+            if ecHFT_volFilter {
+                rowDivider
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 12) {
+                        iconBox("arrow.up.bar.chart", color: ecHFTColor)
+                        Text("Hacim Çarpanı (ortalama ×)")
+                            .font(.system(size: 15, weight: .medium))
+                        Spacer()
+                        Text(String(format: "%.1fx", ecHFT_volMultiplier))
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .foregroundStyle(ecHFTColor)
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(ecHFTColor.opacity(0.1))
+                            .clipShape(Capsule())
+                    }
+                    Slider(value: $ecHFT_volMultiplier, in: 1.0...3.0, step: 0.1)
+                        .tint(ecHFTColor)
+                    Text("Hem bu eşigin üzerinde hem de önceki bardan yüksek olmalı (hacim artışı)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 13)
             }
             rowDivider
             VStack(alignment: .leading, spacing: 8) {

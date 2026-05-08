@@ -484,7 +484,8 @@ enum StrategyScanner {
             let m    = { let v = UserDefaults.standard.double(forKey: "ecHFT_multiplier"); return v > 0 ? v : 1.5 }()
             let fast = { let v = UserDefaults.standard.integer(forKey: "ecHFT_emaFast");   return v > 0 ? v : 2  }()
             let slow = { let v = UserDefaults.standard.integer(forKey: "ecHFT_emaSlow");   return v > 0 ? v : 17 }()
-            let useVol = UserDefaults.standard.object(forKey: "ecHFT_volFilter") == nil
+            let volMult = { let v = UserDefaults.standard.double(forKey: "ecHFT_volMultiplier"); return v > 0 ? v : 1.5 }()
+            let useVol  = UserDefaults.standard.object(forKey: "ecHFT_volFilter") == nil
                 ? true : UserDefaults.standard.bool(forKey: "ecHFT_volFilter")
 
             let (_, stDirs)  = TechnicalAnalysis.supertrend(candles: candles, multiplier: m, period: p)
@@ -498,7 +499,12 @@ enum StrategyScanner {
                 let stBullish      = stDir == 1
                 let priceAboveSlow = price > emaSlowVal
                 let fastAboveSlow  = emaFastVal > emaSlowVal
-                let volOk          = !useVol || volCandle.volume > ind.avgVolume20 * 1.2
+
+                // Hacim artışı: ortalamanın volMult katından fazla VE önceki bardan yüksek
+                let prevVolBar    = isIncompleteBar ? candles.dropLast(2).last : prevCandle
+                let volAboveAvg   = volCandle.volume >= ind.avgVolume20 * volMult
+                let volIncreasing = prevVolBar.map { volCandle.volume > $0.volume } ?? true
+                let volOk         = !useVol || (volAboveAvg && volIncreasing)
 
                 let prevStDir  = stDirs.count >= 2 ? stDirs[stDirs.count - 2] : 0
                 let prevFast   = TechnicalAnalysis.ema(values: prevClosesArr, period: fast).last ?? 0
