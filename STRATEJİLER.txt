@@ -1,7 +1,7 @@
 ================================================================
         HİSSE TAKİP — TARAMA STRATEJİLERİ KILAVUZU
 ================================================================
-Toplam Strateji: 15
+Toplam Strateji: 16
 Güncelleme: Mayıs 2026
 ================================================================
 
@@ -601,6 +601,51 @@ MANTIK:
 
 NE ZAMAN TETİKLENİR:
   Orta sıklıkta — ayı trendinin kırıldığı dönüm noktalarında.
+
+
+----------------------------------------------------------------
+16. 🤖 EC HFT (Kişisel Strateji)
+----------------------------------------------------------------
+NE YAPAR:
+  TradingView'de kişisel olarak kullanılan "EC HFT Full Pro"
+  stratejisinin Swift uyarlaması. SuperTrend trend yönünü,
+  EMA çapraz geçişi momentumu, hacim filtresi ise kurumsal
+  girişi doğrular. Tüm parametreler Ayarlar ekranından
+  kişiselleştirilebilir.
+
+PARAMETRELER (Ayarlar → EC HFT Parametreleri):
+  ATR Periyodu   (varsayılan: 10) — SuperTrend hesabı için
+  ATR Çarpanı    (varsayılan: 1.5) — band genişliği
+  EMA Hızlı      (varsayılan: 2)  — kısa vadeli momentum
+  EMA Yavaş      (varsayılan: 17) — orta vadeli trend
+  Hacim Filtresi (varsayılan: açık) — hacim > ort. × 1.2
+  Stop Loss %    (varsayılan: 7.0%) — referans, tarama dışı
+  Breakeven %    (varsayılan: 2.5%) — referans, tarama dışı
+
+KOŞULLAR:
+  - SuperTrend → boğa yönünde (fiyat alt bantın üzerinde)
+  - Fiyat EMA Yavaş üzerinde (ana momentum pozitif)
+  - EMA Hızlı > EMA Yavaş (kısa vadeli momentum pozitif)
+  - Taze sinyal: SuperTrend yeni boğaya döndü VEYA
+    EMA hızlı, yavazı yukarı kesti (eski sinyaller tekrar üretilmez)
+  - Hacim filtresi aktifse: hacim > 20 günlük ort. × 1.2
+
+GÜÇLÜ SİNYAL:
+  SuperTrend yeni döndü VE EMA kesişimi aynı anda gerçekleşti
+  VE hacim 1.5x+ ise → Güçlü
+  Aksi halde → Orta
+
+MANTIK:
+  Üç bağımsız sistemin aynı anda aynı yönü göstermesi rastlantı
+  değildir. SuperTrend trend yönünü, EMA çapraz geçişi ivmeyi,
+  hacim ise büyük paranın varlığını teyit eder. Taze sinyal şartı
+  eski kurulumlarda sürekli sinyal üretilmesini önler.
+  Stop Loss ve Breakeven değerleri tarama algoritmasında
+  kullanılmaz — bunlar kullanıcının kendi takibi için referans
+  değerlerdir ve Ayarlar ekranında saklanır.
+
+NE ZAMAN TETİKLENİR:
+  Orta sıklıkta — SuperTrend veya EMA taze dönüş anlarında.
 
 
 ================================================================

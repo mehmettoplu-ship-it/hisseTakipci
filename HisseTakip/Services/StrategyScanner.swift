@@ -368,10 +368,8 @@ enum StrategyScanner {
         // Bir yıllık en yüksek seviyeyi hacim onaylı kıran hisseler
         // Kurumsal yatırımcıların izlediği Stage 2 kırılma kalıbı
         // ─────────────────────────────────────────────────────────────────
-        let weeklyBreakoutMin = timeframe == .weekly ? 54 : 200
-        if enabledStrategies.contains(.weeklyBreakout), candles.count >= weeklyBreakoutMin {
-            // Günlük: 251 gün ≈ 1 yıl | Haftalık: 53 hafta ≈ 1 yıl
-            let lookback = timeframe == .weekly ? 53 : 251
+        if enabledStrategies.contains(.weeklyBreakout), candles.count >= 200 {
+            let lookback = 251
             let yearHigh = candles.suffix(lookback).dropLast().map(\.high).max() ?? 0
             if yearHigh > 0,
                price > yearHigh * 1.002,
@@ -472,6 +470,50 @@ enum StrategyScanner {
                             volRatio: volRatio, dailyChange: dailyChange
                         ))
                     }
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // 16. EC HFT (Kişisel Strateji)
+        // SuperTrend boğa + EMA hızlı > EMA yavaş + fiyat > EMA yavaş
+        // Parametreler Ayarlar ekranından değiştirilebilir
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.ecHFT) {
+            let p    = { let v = UserDefaults.standard.integer(forKey: "ecHFT_atrPeriod"); return v > 0 ? v : 10 }()
+            let m    = { let v = UserDefaults.standard.double(forKey: "ecHFT_multiplier"); return v > 0 ? v : 1.5 }()
+            let fast = { let v = UserDefaults.standard.integer(forKey: "ecHFT_emaFast");   return v > 0 ? v : 2  }()
+            let slow = { let v = UserDefaults.standard.integer(forKey: "ecHFT_emaSlow");   return v > 0 ? v : 17 }()
+            let useVol = UserDefaults.standard.object(forKey: "ecHFT_volFilter") == nil
+                ? true : UserDefaults.standard.bool(forKey: "ecHFT_volFilter")
+
+            let (_, stDirs)  = TechnicalAnalysis.supertrend(candles: candles, multiplier: m, period: p)
+            let emaFastVals  = TechnicalAnalysis.ema(values: allCloses, period: fast)
+            let emaSlowVals  = TechnicalAnalysis.ema(values: allCloses, period: slow)
+
+            if let emaFastVal = emaFastVals.last,
+               let emaSlowVal = emaSlowVals.last,
+               let stDir = stDirs.last {
+
+                let stBullish      = stDir == 1
+                let priceAboveSlow = price > emaSlowVal
+                let fastAboveSlow  = emaFastVal > emaSlowVal
+                let volOk          = !useVol || volCandle.volume > ind.avgVolume20 * 1.2
+
+                let prevStDir  = stDirs.count >= 2 ? stDirs[stDirs.count - 2] : 0
+                let prevFast   = TechnicalAnalysis.ema(values: prevClosesArr, period: fast).last ?? 0
+                let prevSlow   = TechnicalAnalysis.ema(values: prevClosesArr, period: slow).last ?? 0
+                let freshST    = prevStDir != 1 && stBullish
+                let freshCross = prevFast <= prevSlow && fastAboveSlow
+
+                if stBullish && priceAboveSlow && fastAboveSlow && volOk && (freshST || freshCross) {
+                    let isStrong = freshST && freshCross && volRatio >= 1.5
+                    signals.append(make(
+                        stock: stock, type: .ecHFT,
+                        strength: isStrong ? .strong : .moderate,
+                        timeframe: timeframe, price: price, ind: ind,
+                        volRatio: volRatio, dailyChange: dailyChange
+                    ))
                 }
             }
         }

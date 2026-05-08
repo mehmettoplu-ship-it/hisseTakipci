@@ -9,6 +9,14 @@ struct SettingsView: View {
     @AppStorage("maxRSIFilter")            private var maxRSIFilter: Double  = 100
     @AppStorage("autoScanIntervalMinutes") private var autoScanInterval: Int = 15
 
+    @AppStorage("ecHFT_atrPeriod")  private var ecHFT_atrPeriod:  Int    = 10
+    @AppStorage("ecHFT_multiplier") private var ecHFT_multiplier: Double = 1.5
+    @AppStorage("ecHFT_emaFast")    private var ecHFT_emaFast:    Int    = 2
+    @AppStorage("ecHFT_emaSlow")    private var ecHFT_emaSlow:    Int    = 17
+    @AppStorage("ecHFT_volFilter")  private var ecHFT_volFilter:  Bool   = true
+    @AppStorage("ecHFT_stopPct")    private var ecHFT_stopPct:    Double = 7.0
+    @AppStorage("ecHFT_bePct")      private var ecHFT_bePct:      Double = 2.5
+
     private let intervalOptions = [5, 10, 15, 30, 60]
 
     var body: some View {
@@ -19,6 +27,7 @@ struct SettingsView: View {
                     scanSection
                     notificationSection
                     strategySection
+                    ecHFTSection
                     aboutSection
                 }
                 .padding(.horizontal, 16)
@@ -208,6 +217,128 @@ struct SettingsView: View {
                 RoundedRectangle(cornerRadius: 18)
                     .fill(Color(.secondarySystemBackground))
             )
+        }
+    }
+
+    // MARK: - EC HFT Parametreleri
+
+    private var ecHFTColor: Color { Color(red: 0.5, green: 0.2, blue: 0.9) }
+
+    private var ecHFTSection: some View {
+        settingsCard(header: "EC HFT Parametreleri", icon: "cpu.fill") {
+            HStack(spacing: 12) {
+                iconBox("waveform", color: ecHFTColor)
+                Text("ATR Periyodu")
+                    .font(.system(size: 15, weight: .medium))
+                Spacer()
+                Stepper(value: $ecHFT_atrPeriod, in: 5...30) {
+                    Text("\(ecHFT_atrPeriod)")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(ecHFTColor)
+                        .frame(width: 30, alignment: .trailing)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            rowDivider
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    iconBox("multiply.circle.fill", color: ecHFTColor)
+                    Text("ATR Çarpanı")
+                        .font(.system(size: 15, weight: .medium))
+                    Spacer()
+                    Text(String(format: "%.1f", ecHFT_multiplier))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(ecHFTColor)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(ecHFTColor.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                Slider(value: $ecHFT_multiplier, in: 0.5...3.0, step: 0.1)
+                    .tint(ecHFTColor)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            rowDivider
+            HStack(spacing: 12) {
+                iconBox("chart.line.flattrend.xyaxis", color: ecHFTColor)
+                Text("EMA Hızlı")
+                    .font(.system(size: 15, weight: .medium))
+                Spacer()
+                Stepper(value: $ecHFT_emaFast, in: 1...20) {
+                    Text("\(ecHFT_emaFast)")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(ecHFTColor)
+                        .frame(width: 30, alignment: .trailing)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            rowDivider
+            HStack(spacing: 12) {
+                iconBox("chart.line.uptrend.xyaxis", color: ecHFTColor)
+                Text("EMA Yavaş")
+                    .font(.system(size: 15, weight: .medium))
+                Spacer()
+                Stepper(value: $ecHFT_emaSlow, in: 5...100) {
+                    Text("\(ecHFT_emaSlow)")
+                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .foregroundStyle(ecHFTColor)
+                        .frame(width: 30, alignment: .trailing)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            rowDivider
+            settingsRow(icon: "chart.bar.fill", iconColor: ecHFTColor) {
+                Toggle("Hacim Filtresi (1.2x+)", isOn: $ecHFT_volFilter)
+                    .tint(ecHFTColor)
+            }
+            rowDivider
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    iconBox("xmark.circle.fill", color: Color(red: 1.0, green: 0.28, blue: 0.32))
+                    Text("Stop Loss")
+                        .font(.system(size: 15, weight: .medium))
+                    Spacer()
+                    Text(String(format: "%.1f%%", ecHFT_stopPct))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(red: 1.0, green: 0.28, blue: 0.32))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color(red: 1.0, green: 0.28, blue: 0.32).opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                Slider(value: $ecHFT_stopPct, in: 1.0...20.0, step: 0.5)
+                    .tint(Color(red: 1.0, green: 0.28, blue: 0.32))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            rowDivider
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 12) {
+                    iconBox("arrow.up.right.circle.fill", color: Color(red: 0.1, green: 0.85, blue: 0.55))
+                    Text("Breakeven Tetik")
+                        .font(.system(size: 15, weight: .medium))
+                    Spacer()
+                    Text(String(format: "%.1f%%", ecHFT_bePct))
+                        .font(.system(size: 13, weight: .bold, design: .monospaced))
+                        .foregroundStyle(Color(red: 0.1, green: 0.85, blue: 0.55))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color(red: 0.1, green: 0.85, blue: 0.55).opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                Slider(value: $ecHFT_bePct, in: 0.5...10.0, step: 0.5)
+                    .tint(Color(red: 0.1, green: 0.85, blue: 0.55))
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 13)
+            Text("Stop Loss ve Breakeven degerleri referans amaclidir.\nTarama yalnizca giris sinyali uretir.")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
         }
     }
 

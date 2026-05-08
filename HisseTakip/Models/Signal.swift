@@ -17,6 +17,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
     case weeklyBreakout       = "52 Hafta Zirvesi"
     case vcpBreakout          = "VCP Kırılması"
     case descendingBreakout   = "Düşen Trend Kırılması"
+    case ecHFT                = "EC HFT"
 
     var emoji: String {
         switch self {
@@ -35,6 +36,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .weeklyBreakout:       return "📈"
         case .vcpBreakout:          return "💎"
         case .descendingBreakout:   return "🔺"
+        case .ecHFT:                return "🤖"
         }
     }
 
@@ -55,6 +57,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .weeklyBreakout:       return "strategy_weeklyBreakout"
         case .vcpBreakout:          return "strategy_vcpBreakout"
         case .descendingBreakout:   return "strategy_descendingBreakout"
+        case .ecHFT:                return "strategy_ecHFT"
         }
     }
 }
@@ -80,6 +83,7 @@ extension SignalType {
         case .weeklyBreakout:     return "52 haftalık (1 yıllık) en yüksek seviyeyi hacim onayıyla kıran hisseleri tespit eder. Kurumsal yatırımcıların en çok izlediği direnç seviyesi."
         case .vcpBreakout:          return "Sıkışma + hacim kuruması + patlama: Minervini'nin VCP (Volatility Contraction Pattern) stratejisi. En kaliteli, en nadir sinyal."
         case .descendingBreakout:   return "Son 30 mumda oluşan alçalan direnç çizgisini hacim ve MACD onayıyla yukarı kıran hisseleri tespit eder. Ayı trendinin erken sona erme sinyali."
+        case .ecHFT:                return "SuperTrend boğa yönünde + EMA hızlı > EMA yavaş + fiyat > EMA yavaş üçlü onayıyla momentum kırılmalarını yakalar. Tüm parametreler ayarlanabilir."
         }
     }
 
@@ -175,6 +179,13 @@ extension SignalType {
                     "Hacim ≥ ortalama × 1.3 (kırılma hacim onaylı)",
                     "RSI 35–62 arası (toparlanıyor, aşırı alım yok)",
                     "MACD pozitif veya yükseliyor, Confluence ≥ 2/5"]
+        case .ecHFT:
+            return ["SuperTrend (ATR periyodu ve çarpan Ayarlar'dan değiştirilebilir) → boğa yönünde",
+                    "Fiyat EMA Yavaş (varsayılan 17) üzerinde",
+                    "EMA Hızlı (varsayılan 2) > EMA Yavaş: kısa vadeli momentum pozitif",
+                    "Taze sinyal: SuperTrend yeni boğaya döndü VEYA EMA hızlı yavazı yukarı kesti",
+                    "Hacim filtresi etkinse: hacim > ortalama × 1.2 (para girişi var)",
+                    "Parametreler: ATR periyodu, çarpan, EMA hızlı/yavaş, hacim filtresi, stop %, breakeven %"]
         }
     }
 
@@ -210,6 +221,8 @@ extension SignalType {
             return "Minervini'nin VCP metodolojisi: her sıkışma dönemi kurumların sessizce birikim yaptığı zamandır. Hacim kuruyorsa satıcılar tükeniyor demektir. Sıkışmanın ardından 3x+ hacimli patlama = akıllı para alımı. Bu kombinasyonun sinyali çok nadiren tetiklenir ama tetiklendiğinde harekete geçmeye değer."
         case .descendingBreakout:
             return "Düşen trendde her mum bir öncekinin zirvesini geçemez — bu 'alçalan direnç' çizgisi oluşturur. Fiyat bu çizgiyi hacimle geçtiğinde satıcıların tükendiğini ve alıcıların kontrolü devraldığını gösterir. RSI'nın 35+ olması bazı alıcıların zaten harekete geçtiğini, MACD teyidi ise momentumun döndüğünü teyit eder. Bu strateji ayı trendinin erken kırıldığı anı yakalar."
+        case .ecHFT:
+            return "TradingView'de kişisel olarak kullanılan 'EC HFT Full Pro' stratejisinin Swift uyarlaması. SuperTrend trend yönünü belirler (boğa/ayı), EMA hızlı/yavaş kesişimi kısa vadeli momentumu teyit eder, hacim filtresi ise kurumsal girişin varlığını doğrular. Üç koşulun aynı anda sağlanması gereksiz gürültüyü filtreler. Taze sinyal şartı (yeni dönüş veya taze kesişim) eski sinyallerin tekrar tetiklenmesini önler. Tüm parametreler Ayarlar ekranından kişiselleştirilebilir."
         }
     }
 
@@ -230,6 +243,7 @@ extension SignalType {
         case .weeklyBreakout:     return "Hacim 2x+ VE RSI 60+ → Güçlü. 1.5–2x hacim ve RSI 55–60 → Orta."
         case .vcpBreakout:          return "Hacim 4x+ VE RSI 62+ → Güçlü. 3–4x hacim arası → Orta."
         case .descendingBreakout:   return "Hacim 2x+ VE RSI 42+ VE MACD histogramı pozitif → Güçlü. Aksi halde Orta."
+        case .ecHFT:                return "SuperTrend yeni döndü VE EMA kesişimi aynı anda gerçekleşti VE hacim 1.5x+ → Güçlü. Aksi halde → Orta."
         }
     }
 
@@ -250,6 +264,7 @@ extension SignalType {
         case .weeklyBreakout:     return "Seyrek"
         case .vcpBreakout:          return "Çok Seyrek"
         case .descendingBreakout:   return "Orta Sıklıkta"
+        case .ecHFT:                return "Orta Sıklıkta"
         }
     }
 }
