@@ -18,6 +18,8 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
     case vcpBreakout          = "VCP Kırılması"
     case descendingBreakout   = "Düşen Trend Kırılması"
     case ecHFT                = "EC HFT"
+    case macdBullish          = "MACD Boğa Sinyali"
+    case ichimokuBullish      = "Ichimoku Bulut Üstü"
 
     var emoji: String {
         switch self {
@@ -37,6 +39,8 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .vcpBreakout:          return "💎"
         case .descendingBreakout:   return "🔺"
         case .ecHFT:                return "🤖"
+        case .macdBullish:          return "〽️"
+        case .ichimokuBullish:      return "☁️"
         }
     }
 
@@ -58,6 +62,8 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .vcpBreakout:          return "strategy_vcpBreakout"
         case .descendingBreakout:   return "strategy_descendingBreakout"
         case .ecHFT:                return "strategy_ecHFT"
+        case .macdBullish:          return "strategy_macdBullish"
+        case .ichimokuBullish:      return "strategy_ichimokuBullish"
         }
     }
 }
@@ -84,6 +90,8 @@ extension SignalType {
         case .vcpBreakout:          return "Sıkışma + hacim kuruması + patlama: Minervini'nin VCP (Volatility Contraction Pattern) stratejisi. En kaliteli, en nadir sinyal."
         case .descendingBreakout:   return "Son 30 mumda oluşan alçalan direnç çizgisini hacim ve MACD onayıyla yukarı kıran hisseleri tespit eder. Ayı trendinin erken sona erme sinyali."
         case .ecHFT:                return "SuperTrend boğa yönünde + EMA hızlı > EMA yavaş + fiyat > EMA yavaş üçlü onayıyla momentum kırılmalarını yakalar. Tüm parametreler ayarlanabilir."
+        case .macdBullish:          return "MACD histogramının negatiften pozitife geçtiği (al verdi) veya geçmek üzere olduğu (3 ardışık yükseliş, sıfıra yakın) hisseleri tespit eder."
+        case .ichimokuBullish:      return "Fiyat Ichimoku bulutunun üzerinde, Tenkan-sen > Kijun-sen ve Chikou doğrulaması olan güçlü boğa setuplelarını tespit eder."
         }
     }
 
@@ -186,6 +194,19 @@ extension SignalType {
                     "Taze sinyal: SuperTrend yeni boğaya döndü VEYA EMA hızlı yavazı yukarı kesti",
                     "Hacim artışı: hacim > ortalama × çarpan (ayarlanabilir) VE önceki bardan yüksek",
                     "Parametreler: ATR periyodu (1–30), çarpan, EMA hızlı/yavaş, hacim çarpanı, stop %, breakeven %"]
+        case .macdBullish:
+            return ["MACD histogramı negatiften pozitife geçti (Güçlü) VEYA",
+                    "Histogram hâlâ negatif ama 3 ardışık bar yükseliyor ve sıfıra < %0.3 uzakta (Orta)",
+                    "RSI 30–72 arasında (aşırı bölgede değil)",
+                    "Fiyat EMA50'nin %90'ı üzerinde (kopuk trend değil)",
+                    "Hacim ≥ ortalama × 0.75 (minimum katılım)"]
+        case .ichimokuBullish:
+            return ["Fiyat hem Senkou Span A hem de Senkou Span B'nin üzerinde (bulut üstünde)",
+                    "Tenkan-sen (9-periyot) > Kijun-sen (26-periyot) — kısa vade uzun vadeyi geçiyor",
+                    "Senkou Span A > Senkou Span B — bulut yeşil (boğa bulutu)",
+                    "Chikou Span: bugünkü kapanış, 26 bar önceki kapanışın üzerinde",
+                    "RSI 42–72 arasında, hacim ≥ ortalama × 0.8",
+                    "Güçlü: 4 ana koşul + RSI + hacim | Orta: bulut üstü + Tenkan > Kijun"]
         }
     }
 
@@ -223,6 +244,10 @@ extension SignalType {
             return "Düşen trendde her mum bir öncekinin zirvesini geçemez — bu 'alçalan direnç' çizgisi oluşturur. Fiyat bu çizgiyi hacimle geçtiğinde satıcıların tükendiğini ve alıcıların kontrolü devraldığını gösterir. RSI'nın 35+ olması bazı alıcıların zaten harekete geçtiğini, MACD teyidi ise momentumun döndüğünü teyit eder. Bu strateji ayı trendinin erken kırıldığı anı yakalar."
         case .ecHFT:
             return "TradingView'de kişisel olarak kullanılan 'EC HFT Full Pro' stratejisinin Swift uyarlaması. SuperTrend trend yönünü belirler (boğa/ayı), EMA hızlı/yavaş kesişimi kısa vadeli momentumu teyit eder, hacim filtresi ise kurumsal girişin varlığını doğrular. Üç koşulun aynı anda sağlanması gereksiz gürültüyü filtreler. Taze sinyal şartı (yeni dönüş veya taze kesişim) eski sinyallerin tekrar tetiklenmesini önler. Tüm parametreler Ayarlar ekranından kişiselleştirilebilir."
+        case .macdBullish:
+            return "MACD (12/26/9) histogramı momentum yönünü doğrudan ölçer. Histogram negatiften pozitife geçtiğinde satıcı baskısı yerini alıcı baskısına bırakmış demektir — bu 'al verdi' anıdır. Histogram henüz geçmemiş ama hızla yükseliyorsa ve sıfıra çok yakınsa, bir sonraki mum büyük ihtimalle geçişi tamamlayacak — bu 'al vermek üzere' anıdır. İkinci senaryo önceden konumlanma fırsatı sunar ancak daha yüksek risk taşır."
+        case .ichimokuBullish:
+            return "Ichimoku Kinko Hyo (均衡表) — Japon teknik analizin en kapsamlı sistemi. Tek bir grafikte destek/direnç, trend yönü, momentum ve süre bilgisini birleştirir. 'Bulut üstü' fiyatın güçlü destek bölgesinin üzerinde olduğunu, 'Tenkan > Kijun' kısa vadeli momentumun uzun vadeyi geçtiğini, 'yeşil bulut' orta vadeli trendin boğa yönünde olduğunu, 'Chikou doğrulaması' ise tarihin momentum iddiasını desteklediğini gösterir. Dört bileşenin aynı anda uyum içinde olması nadir ama son derece güçlü bir sinyal üretir."
         }
     }
 
@@ -244,6 +269,8 @@ extension SignalType {
         case .vcpBreakout:          return "Hacim 4x+ VE RSI 62+ → Güçlü. 3–4x hacim arası → Orta."
         case .descendingBreakout:   return "Hacim 2x+ VE RSI 42+ VE MACD histogramı pozitif → Güçlü. Aksi halde Orta."
         case .ecHFT:                return "SuperTrend yeni döndü VE EMA kesişimi aynı anda gerçekleşti VE hacim 1.5x+ → Güçlü. Aksi halde → Orta."
+        case .macdBullish:          return "Histogram negatiften pozitife geçtiyse Güçlü. Histogram hâlâ negatif ama sıfıra yaklaşıyorsa Orta."
+        case .ichimokuBullish:      return "Tenkan > Kijun + Bulut üstü + Yeşil bulut + Chikou doğrulaması + RSI 50+ + Hacim 1x+ → Güçlü. Bulut üstü + Tenkan > Kijun (diğerleri eksik) → Orta."
         }
     }
 
@@ -265,6 +292,8 @@ extension SignalType {
         case .vcpBreakout:          return "Çok Seyrek"
         case .descendingBreakout:   return "Orta Sıklıkta"
         case .ecHFT:                return "Orta Sıklıkta"
+        case .macdBullish:          return "Sık"
+        case .ichimokuBullish:      return "Seyrek"
         }
     }
 }

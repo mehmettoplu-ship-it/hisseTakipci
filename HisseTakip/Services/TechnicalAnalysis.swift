@@ -153,6 +153,36 @@ enum TechnicalAnalysis {
         return slice.reduce(0, +) / Double(slice.count)
     }
 
+    // MARK: - Ichimoku Cloud (9/26/52)
+    // Döndürdüğü değerler: (tenkan, kijun, senkouA, senkouB, chikouAbove)
+    // senkouA ve senkouB bugünkü bulutu temsil eder (26 bar önceki hesaplama, ileriye yansıtılmış)
+    static func ichimoku(candles: [Candle]) -> (tenkan: Double, kijun: Double, senkouA: Double, senkouB: Double, chikouAbove: Bool)? {
+        guard candles.count >= 78 else { return nil }
+        let arr = candles
+
+        func midPrice(_ slice: ArraySlice<Candle>) -> Double {
+            let highs = slice.map(\.high)
+            let lows  = slice.map(\.low)
+            guard let h = highs.max(), let l = lows.min() else { return 0 }
+            return (h + l) / 2
+        }
+
+        let tenkan = midPrice(arr.suffix(9))
+        let kijun  = midPrice(arr.suffix(26))
+
+        // Bugünkü bulut = 26 bar önceki Span A ve Span B değerleri (26 bar ileriye yansıtılmış)
+        let past   = arr.dropLast(26)
+        let pastT  = midPrice(past.suffix(9))
+        let pastK  = midPrice(past.suffix(26))
+        let senkouA = (pastT + pastK) / 2
+        let senkouB = midPrice(past.suffix(52))
+
+        // Chikou: bugünkü kapanış vs 26 bar önceki kapanış
+        let chikouAbove = arr.last!.close > arr[arr.count - 27].close
+
+        return (tenkan, kijun, senkouA, senkouB, chikouAbove)
+    }
+
     // MARK: - Tüm göstergeleri hesapla
     static func calculate(candles: [Candle]) -> TechnicalIndicators? {
         guard candles.count >= 50 else { return nil }

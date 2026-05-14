@@ -524,6 +524,65 @@ enum StrategyScanner {
             }
         }
 
+        // ─────────────────────────────────────────────────────────────────
+        // 17. MACD BOĞA SİNYALİ
+        // Histogram negatiften pozitife geçti (al verdi) — GÜÇLÜ
+        // Histogram negatif ama 3 ardışık bar yükseliyor ve sıfıra yakın — ORTA
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.macdBullish) {
+            let (_, _, fullHist) = TechnicalAnalysis.macd(closes: allCloses)
+            if fullHist.count >= 3 {
+                let h0 = fullHist[fullHist.count - 1]   // son bar
+                let h1 = fullHist[fullHist.count - 2]   // önceki bar
+                let h2 = fullHist[fullHist.count - 3]   // 2 bar önce
+
+                let crossoverHappened = h0 > 0 && h1 < 0
+                let ascending3        = h0 > h1 && h1 > h2
+                let nearZero          = h0 < 0 && h0 > -(price * 0.003)
+                let aboutToGive       = !crossoverHappened && ascending3 && nearZero
+
+                if crossoverHappened || aboutToGive {
+                    let rsiOk       = ind.rsi > 30 && ind.rsi < 72
+                    let notFreefall = price >= ind.ema50 * 0.90
+                    let volOk       = volCandle.volume >= ind.avgVolume20 * 0.75
+
+                    if rsiOk && notFreefall && volOk {
+                        signals.append(make(
+                            stock: stock, type: .macdBullish,
+                            strength: crossoverHappened ? .strong : .moderate,
+                            timeframe: timeframe, price: price, ind: ind,
+                            volRatio: volRatio, dailyChange: dailyChange
+                        ))
+                    }
+                }
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // 18. ICHİMOKU BULUT ÜSTÜ
+        // Fiyat bulut üstü + Tenkan > Kijun + Yeşil bulut + Chikou doğrulaması
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.ichimokuBullish),
+           let ichi = TechnicalAnalysis.ichimoku(candles: candles) {
+
+            let cloudTop         = max(ichi.senkouA, ichi.senkouB)
+            let aboveCloud       = price > cloudTop
+            let tenkanAboveKijun = ichi.tenkan > ichi.kijun
+            let greenCloud       = ichi.senkouA > ichi.senkouB
+            let rsiOk            = ind.rsi > 42 && ind.rsi < 72
+            let volOk            = volCandle.volume >= ind.avgVolume20 * 0.8
+
+            if aboveCloud && tenkanAboveKijun && volOk {
+                let isStrong = greenCloud && ichi.chikouAbove && rsiOk && ind.rsi > 50
+                signals.append(make(
+                    stock: stock, type: .ichimokuBullish,
+                    strength: isStrong ? .strong : .moderate,
+                    timeframe: timeframe, price: price, ind: ind,
+                    volRatio: volRatio, dailyChange: dailyChange
+                ))
+            }
+        }
+
         return signals
     }
 
