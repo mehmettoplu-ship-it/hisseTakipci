@@ -341,6 +341,8 @@ struct Signal: Identifiable, Codable {
     let macdHistogram: Double?
     let volumeRatio: Double?
     let dailyChangePercent: Double?
+    let barsAgo: Int?
+    let signalRunup: Double?
 
     var notificationTitle: String {
         "\(stock.symbol) — \(type.rawValue) (\(timeframe.displayName))"

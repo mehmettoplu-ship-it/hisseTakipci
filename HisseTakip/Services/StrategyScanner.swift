@@ -24,6 +24,11 @@ enum StrategyScanner {
         let prevEma9Last  = TechnicalAnalysis.ema(values: prevClosesArr, period: 9).last  ?? 0
         let prevEma21Last = TechnicalAnalysis.ema(values: prevClosesArr, period: 21).last ?? 0
         let prevEma50Last = TechnicalAnalysis.ema(values: prevClosesArr, period: 50).last ?? 0
+        let fullEma9Arr  = TechnicalAnalysis.ema(values: allCloses, period: 9)
+        let fullEma21Arr = TechnicalAnalysis.ema(values: allCloses, period: 21)
+        let fullEma50Arr = TechnicalAnalysis.ema(values: allCloses, period: 50)
+        let (_, _, fullHistArr) = TechnicalAnalysis.macd(closes: allCloses)
+        let lastIdx = candles.count - 1
         // During market hours the current daily bar is incomplete — use previous complete bar for volume checks
         let isIncompleteBar = Calendar.current.isDateInToday(lastCandle.timestamp)
         let volCandle       = isIncompleteBar ? prevCandle : lastCandle
@@ -31,6 +36,69 @@ enum StrategyScanner {
         let confluence = TechnicalAnalysis.confluenceScore(candles: candles, ind: ind, price: price)
         let dailyChange: Double? = prevCandle.close > 0
             ? (price - prevCandle.close) / prevCandle.close * 100 : nil
+
+        // ── Sinyal yaşı yardımcıları ───────────────────────────────────
+        // Her strateji için "k bar önce de geçerliydi mi?" kontrolü
+        func conditionStillHeld(type: SignalType, kBarsAgo k: Int) -> Bool {
+            guard k > 0 && k <= lastIdx else { return false }
+            let idx = lastIdx - k
+            let c   = candles[idx]
+            switch type {
+            case .resistanceBreakout:
+                let s = max(0, idx - 20)
+                guard s < idx else { return false }
+                let h20 = candles[s..<idx].map(\.high).max() ?? 0
+                return h20 > 0 && c.close > h20 * 1.005
+            case .emaBullishCross:
+                let e9i = fullEma9Arr.count - 1 - k
+                let e21i = fullEma21Arr.count - 1 - k
+                guard e9i >= 0 && e21i >= 0 else { return false }
+                return fullEma9Arr[e9i] > fullEma21Arr[e21i]
+            case .goldenCross:
+                let e21i = fullEma21Arr.count - 1 - k
+                let e50i = fullEma50Arr.count - 1 - k
+                guard e21i >= 0 && e50i >= 0 else { return false }
+                return fullEma21Arr[e21i] > fullEma50Arr[e50i]
+            case .maStack:
+                let e9i = fullEma9Arr.count - 1 - k
+                let e21i = fullEma21Arr.count - 1 - k
+                let e50i = fullEma50Arr.count - 1 - k
+                guard e9i >= 0 && e21i >= 0 && e50i >= 0 else { return false }
+                return fullEma9Arr[e9i] > fullEma21Arr[e21i] && fullEma21Arr[e21i] > fullEma50Arr[e50i]
+            case .weeklyBreakout:
+                let s = max(0, idx - 252)
+                guard s < idx else { return false }
+                let h52 = candles[s..<idx].map(\.high).max() ?? 0
+                return h52 > 0 && c.close > h52
+            case .macdBullish:
+                let hi = fullHistArr.count - 1 - k
+                guard hi >= 0 else { return false }
+                return fullHistArr[hi] > 0
+            case .ichimokuBullish:
+                guard idx >= 77 else { return false }
+                guard let ichi = TechnicalAnalysis.ichimoku(candles: Array(candles.prefix(idx + 1)))
+                else { return false }
+                return c.close > max(ichi.senkouA, ichi.senkouB) && ichi.tenkan > ichi.kijun
+            default:
+                return false
+            }
+        }
+
+        func signalAge(for type: SignalType) -> (barsAgo: Int, runup: Double) {
+            var firstBar = lastIdx
+            for k in 1...min(15, lastIdx) {
+                if conditionStillHeld(type: type, kBarsAgo: k) { firstBar = lastIdx - k } else { break }
+            }
+            let tp = candles[firstBar].close
+            return (barsAgo: lastIdx - firstBar, runup: tp > 0 ? (price - tp) / tp * 100.0 : 0.0)
+        }
+
+        func makeS(_ type: SignalType, _ strength: SignalStrength) -> Signal {
+            let (ba, ru) = signalAge(for: type)
+            return make(stock: stock, type: type, strength: strength, timeframe: timeframe,
+                        price: price, ind: ind, volRatio: volRatio, dailyChange: dailyChange,
+                        barsAgo: ba, signalRunup: ru)
+        }
 
         // ─────────────────────────────────────────────────────────────────
         // 1. DİRENÇ KIRILMASI
@@ -42,12 +110,7 @@ enum StrategyScanner {
                volRatio >= 2.0,
                ind.rsi > 42, ind.rsi < 68,
                confluence >= 2 {
-                signals.append(make(
-                    stock: stock, type: .resistanceBreakout,
-                    strength: volRatio >= 3.0 ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.resistanceBreakout, volRatio >= 3.0 ? .strong : .moderate))
             }
         }
 
@@ -65,12 +128,7 @@ enum StrategyScanner {
                 let notFreefall   = price >= ind.ema50 * 0.72                   // kopuk trend değil
                 if macdConfirmed && bullishDay && volumeOk && notFreefall {
                     let isStrong = prevRSI < 24 && volRatio >= 1.2
-                    signals.append(make(
-                        stock: stock, type: .oversoldReversal,
-                        strength: isStrong ? .strong : .moderate,
-                        timeframe: timeframe, price: price, ind: ind,
-                        volRatio: volRatio, dailyChange: dailyChange
-                    ))
+                    signals.append(makeS(.oversoldReversal, isStrong ? .strong : .moderate))
                 }
             }
         }
@@ -86,12 +144,7 @@ enum StrategyScanner {
                ind.rsi > 45,
                volCandle.volume >= ind.avgVolume20 * 0.9,
                confluence >= 2 {
-                signals.append(make(
-                    stock: stock, type: .emaBullishCross,
-                    strength: volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.emaBullishCross, volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate))
             }
         }
 
@@ -106,12 +159,7 @@ enum StrategyScanner {
                ind.rsi > 45, ind.rsi < 72,
                volCandle.volume >= ind.avgVolume20,
                confluence >= 2 {
-                signals.append(make(
-                    stock: stock, type: .goldenCross,
-                    strength: volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.goldenCross, volRatio >= 1.5 && ind.rsi > 52 ? .strong : .moderate))
             }
         }
 
@@ -128,12 +176,7 @@ enum StrategyScanner {
                ind.rsi < 38,
                closeInUpperHalf,
                confluence >= 2 {
-                signals.append(make(
-                    stock: stock, type: .bollingerBounce,
-                    strength: ind.rsi < 30 ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.bollingerBounce, ind.rsi < 30 ? .strong : .moderate))
             }
         }
 
@@ -151,12 +194,7 @@ enum StrategyScanner {
             let rsiOk      = ind.rsi > 45 && ind.rsi < 68
 
             if squeezed && breakingUp && volOk && rsiOk && confluence >= 2 {
-                signals.append(make(
-                    stock: stock, type: .squeezeBounce,
-                    strength: volRatio >= 2.0 ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.squeezeBounce, volRatio >= 2.0 ? .strong : .moderate))
             }
         }
 
@@ -188,12 +226,7 @@ enum StrategyScanner {
 
                 if recentRSI > earlierRSI + 5.0, recentRSI < 52 {
                     let mag = recentRSI - earlierRSI
-                    signals.append(make(
-                        stock: stock, type: .rsiDivergence,
-                        strength: mag >= 12 ? .strong : .moderate,
-                        timeframe: timeframe, price: price, ind: ind,
-                        volRatio: volRatio, dailyChange: dailyChange
-                    ))
+                    signals.append(makeS(.rsiDivergence, mag >= 12 ? .strong : .moderate))
                 }
             }
         }
@@ -212,12 +245,7 @@ enum StrategyScanner {
                 if ind.ema9 > prevEma9Last {
                     let freshCross = prevEma21Last <= prevEma50Last && ind.ema21 > ind.ema50
                     let isStrong   = freshCross || (volRatio >= 2.0 && ind.rsi > 55)
-                    signals.append(make(
-                        stock: stock, type: .maStack,
-                        strength: isStrong ? .strong : .moderate,
-                        timeframe: timeframe, price: price, ind: ind,
-                        volRatio: volRatio, dailyChange: dailyChange
-                    ))
+                    signals.append(makeS(.maStack, isStrong ? .strong : .moderate))
                 }
             }
         }
@@ -244,12 +272,7 @@ enum StrategyScanner {
                 let breakoutHadVolume = breakoutCandles.contains {
                     $0.volume > ind.avgVolume20 * 1.8
                 }
-                signals.append(make(
-                    stock: stock, type: .breakoutRetest,
-                    strength: breakoutHadVolume && price > ind.ema50 ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.breakoutRetest, breakoutHadVolume && price > ind.ema50 ? .strong : .moderate))
             }
         }
 
@@ -270,12 +293,7 @@ enum StrategyScanner {
                ind.rsi > 38, ind.rsi < 60,
                confluence >= 2 {
                 let isStrong = ema50Touch && volRatio >= 1.3 && ind.rsi > 42
-                signals.append(make(
-                    stock: stock, type: .trendPullback,
-                    strength: isStrong ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.trendPullback, isStrong ? .strong : .moderate))
             }
         }
 
@@ -302,12 +320,7 @@ enum StrategyScanner {
                                   (prevEma9Last < ind.ema9 * 0.998)
                 let isStrong = freshSignal && volRatio >= 1.5
 
-                signals.append(make(
-                    stock: stock, type: .smartMomentum,
-                    strength: isStrong ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.smartMomentum, isStrong ? .strong : .moderate))
             }
         }
 
@@ -352,12 +365,7 @@ enum StrategyScanner {
                             isStrong = lowerShadow / range > 0.70 &&
                                        (nearBB || abs(price - ind.ema50) / ind.ema50 < 0.015)
                         }
-                        signals.append(make(
-                            stock: stock, type: .candlePattern,
-                            strength: isStrong ? .strong : .moderate,
-                            timeframe: timeframe, price: price, ind: ind,
-                            volRatio: volRatio, dailyChange: dailyChange
-                        ))
+                        signals.append(makeS(.candlePattern, isStrong ? .strong : .moderate))
                     }
                 }
             }
@@ -377,12 +385,7 @@ enum StrategyScanner {
                ind.rsi > 55, ind.rsi < 78,
                price > ind.ema21,
                price > ind.ema50 {
-                signals.append(make(
-                    stock: stock, type: .weeklyBreakout,
-                    strength: volRatio >= 2.0 && ind.rsi > 60 ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.weeklyBreakout, volRatio >= 2.0 && ind.rsi > 60 ? .strong : .moderate))
             }
         }
 
@@ -410,12 +413,7 @@ enum StrategyScanner {
 
             if atrContracted && volumeDriedUp && breakingOut && explosionVol
                && inUptrend && rsiOk && macdOk && confluence >= 3 {
-                signals.append(make(
-                    stock: stock, type: .vcpBreakout,
-                    strength: volRatio >= 4.0 && ind.rsi > 62 ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.vcpBreakout, volRatio >= 4.0 && ind.rsi > 62 ? .strong : .moderate))
             }
         }
 
@@ -463,12 +461,7 @@ enum StrategyScanner {
 
                     if freshBreakout && breakingAbove && volOk && rsiOk && macdOk && confluence >= 2 {
                         let isStrong = volRatio >= 2.0 && ind.rsi > 42 && ind.macdHistogram > 0
-                        signals.append(make(
-                            stock: stock, type: .descendingBreakout,
-                            strength: isStrong ? .strong : .moderate,
-                            timeframe: timeframe, price: price, ind: ind,
-                            volRatio: volRatio, dailyChange: dailyChange
-                        ))
+                        signals.append(makeS(.descendingBreakout, isStrong ? .strong : .moderate))
                     }
                 }
             }
@@ -514,12 +507,7 @@ enum StrategyScanner {
 
                 if stBullish && priceAboveSlow && fastAboveSlow && volOk && (freshST || freshCross) {
                     let isStrong = freshST && freshCross && volRatio >= 1.5
-                    signals.append(make(
-                        stock: stock, type: .ecHFT,
-                        strength: isStrong ? .strong : .moderate,
-                        timeframe: timeframe, price: price, ind: ind,
-                        volRatio: volRatio, dailyChange: dailyChange
-                    ))
+                    signals.append(makeS(.ecHFT, isStrong ? .strong : .moderate))
                 }
             }
         }
@@ -558,12 +546,7 @@ enum StrategyScanner {
             // 7 koşulun tamamı
             if breakout && heavyVolume && emaAligned && macdAccel && rsiSweet && strongClose && confluenceOk {
                 let isStrong = volRatio >= 3.5 && ind.rsi > 55 && confluence >= 4
-                signals.append(make(
-                    stock: stock, type: .titanBreakout,
-                    strength: isStrong ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.titanBreakout, isStrong ? .strong : .moderate))
             }
         }
 
@@ -573,11 +556,10 @@ enum StrategyScanner {
         // Histogram negatif ama 3 ardışık bar yükseliyor ve sıfıra yakın — ORTA
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.macdBullish) {
-            let (_, _, fullHist) = TechnicalAnalysis.macd(closes: allCloses)
-            if fullHist.count >= 3 {
-                let h0 = fullHist[fullHist.count - 1]   // son bar
-                let h1 = fullHist[fullHist.count - 2]   // önceki bar
-                let h2 = fullHist[fullHist.count - 3]   // 2 bar önce
+            if fullHistArr.count >= 3 {
+                let h0 = fullHistArr[fullHistArr.count - 1]   // son bar
+                let h1 = fullHistArr[fullHistArr.count - 2]   // önceki bar
+                let h2 = fullHistArr[fullHistArr.count - 3]   // 2 bar önce
 
                 let crossoverHappened = h0 > 0 && h1 < 0
                 let ascending3        = h0 > h1 && h1 > h2
@@ -590,12 +572,7 @@ enum StrategyScanner {
                     let volOk       = volCandle.volume >= ind.avgVolume20 * 0.75
 
                     if rsiOk && notFreefall && volOk {
-                        signals.append(make(
-                            stock: stock, type: .macdBullish,
-                            strength: crossoverHappened ? .strong : .moderate,
-                            timeframe: timeframe, price: price, ind: ind,
-                            volRatio: volRatio, dailyChange: dailyChange
-                        ))
+                        signals.append(makeS(.macdBullish, crossoverHappened ? .strong : .moderate))
                     }
                 }
             }
@@ -617,12 +594,7 @@ enum StrategyScanner {
 
             if aboveCloud && tenkanAboveKijun && volOk {
                 let isStrong = greenCloud && ichi.chikouAbove && rsiOk && ind.rsi > 50
-                signals.append(make(
-                    stock: stock, type: .ichimokuBullish,
-                    strength: isStrong ? .strong : .moderate,
-                    timeframe: timeframe, price: price, ind: ind,
-                    volRatio: volRatio, dailyChange: dailyChange
-                ))
+                signals.append(makeS(.ichimokuBullish, isStrong ? .strong : .moderate))
             }
         }
 
@@ -632,13 +604,15 @@ enum StrategyScanner {
     private static func make(
         stock: Stock, type: SignalType, strength: SignalStrength,
         timeframe: Timeframe, price: Double, ind: TechnicalIndicators,
-        volRatio: Double? = nil, dailyChange: Double? = nil
+        volRatio: Double? = nil, dailyChange: Double? = nil,
+        barsAgo: Int? = nil, signalRunup: Double? = nil
     ) -> Signal {
         Signal(
             id: UUID(), stock: stock, type: type, strength: strength,
             timeframe: timeframe, price: price, timestamp: Date(),
             rsi: ind.rsi, macdHistogram: ind.macdHistogram,
-            volumeRatio: volRatio, dailyChangePercent: dailyChange
+            volumeRatio: volRatio, dailyChangePercent: dailyChange,
+            barsAgo: barsAgo, signalRunup: signalRunup
         )
     }
 }

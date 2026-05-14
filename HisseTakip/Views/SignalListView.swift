@@ -517,7 +517,7 @@ private struct StockSignalGroupCard: View {
                     .fill(sc)
                     .frame(width: 7, height: 7)
             }
-            // RSI + Hacim
+            // RSI + Hacim + Sinyal Yaşı
             HStack(spacing: 8) {
                 if let rsi = signal.rsi {
                     metricBadge(label: "RSI",
@@ -530,6 +530,9 @@ private struct StockSignalGroupCard: View {
                                 value: String(format: "%.1fx", vr),
                                 color: vr >= 3 ? Color(red: 0.2, green: 0.5, blue: 1.0)
                                      : vr >= 1.5 ? .orange : .secondary)
+                }
+                if let ba = signal.barsAgo {
+                    ageBadge(barsAgo: ba, runup: signal.signalRunup ?? 0)
                 }
                 Spacer()
             }
@@ -550,6 +553,34 @@ private struct StockSignalGroupCard: View {
         }
         .padding(.horizontal, 6).padding(.vertical, 2)
         .background(Color(.tertiarySystemBackground))
+        .clipShape(Capsule())
+    }
+
+    private func ageBadge(barsAgo: Int, runup: Double) -> some View {
+        let text: String
+        let col: Color
+        if barsAgo == 0 {
+            text = "Taze"; col = Color(red: 0.1, green: 0.85, blue: 0.55)
+        } else if runup >= 5 {
+            text = "\(barsAgo)b | +\(String(format: "%.1f", runup))%"
+            col  = Color(red: 1.0, green: 0.28, blue: 0.32)
+        } else if runup >= 2 {
+            text = "\(barsAgo)b | +\(String(format: "%.1f", runup))%"
+            col  = Color(red: 1.0, green: 0.62, blue: 0.0)
+        } else {
+            text = "\(barsAgo)b önce"; col = Color(.secondaryLabel)
+        }
+        return HStack(spacing: 3) {
+            Image(systemName: "clock")
+                .font(.system(size: 8, weight: .medium))
+                .foregroundStyle(col)
+            Text(text)
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .foregroundStyle(col)
+        }
+        .padding(.horizontal, 6).padding(.vertical, 2)
+        .background(col.opacity(0.1))
+        .overlay(Capsule().strokeBorder(col.opacity(0.3), lineWidth: 0.5))
         .clipShape(Capsule())
     }
 
@@ -623,6 +654,12 @@ struct SignalCardView: View {
                         dataChip(label: "Hacim", value: String(format: "%.1fx", vr),
                                  valueColor: vr >= 2 ? Color(red: 0.1, green: 0.85, blue: 0.55) : nil)
                     }
+                    if let ba = signal.barsAgo {
+                        chipDivider()
+                        dataChip(label: "Yaş",
+                                 value: ageLabel(barsAgo: ba, runup: signal.signalRunup ?? 0),
+                                 valueColor: ageColor(runup: signal.signalRunup ?? 0, barsAgo: ba))
+                    }
                     Spacer()
                     Text(signal.timestamp, style: .time)
                         .font(.system(size: 10, design: .monospaced))
@@ -655,5 +692,18 @@ struct SignalCardView: View {
     private func chipDivider() -> some View {
         Rectangle().fill(Color(.separator).opacity(0.5))
             .frame(width: 1, height: 20).padding(.horizontal, 9)
+    }
+
+    private func ageLabel(barsAgo: Int, runup: Double) -> String {
+        if barsAgo == 0 { return "Taze" }
+        if runup >= 2   { return "\(barsAgo)b|+\(String(format: "%.1f", runup))%" }
+        return "\(barsAgo)b önce"
+    }
+
+    private func ageColor(runup: Double, barsAgo: Int) -> Color {
+        if barsAgo == 0 { return Color(red: 0.1, green: 0.85, blue: 0.55) }
+        if runup >= 5   { return Color(red: 1.0, green: 0.28, blue: 0.32) }
+        if runup >= 2   { return Color(red: 1.0, green: 0.62, blue: 0.0) }
+        return .secondary
     }
 }
