@@ -338,6 +338,8 @@ struct ScannerView: View {
         case .vcpBreakout:          return Color(red: 0.85, green: 0.7,  blue: 0.1)
         case .descendingBreakout:   return Color(red: 1.0,  green: 0.45, blue: 0.2)
         case .ecHFT:                return Color(red: 0.5,  green: 0.2,  blue: 0.9)
+        case .macdBullish:          return Color(red: 0.0,  green: 0.65, blue: 0.75)
+        case .ichimokuBullish:      return Color(red: 0.15, green: 0.6,  blue: 0.35)
         }
     }
 
@@ -433,6 +435,8 @@ struct ScannerView: View {
         case .vcpBreakout:          return "VCP\nKırılma"
         case .descendingBreakout:   return "Düşen\nKırılım"
         case .ecHFT:                return "EC\nHFT"
+        case .macdBullish:          return "MACD\nBoğa"
+        case .ichimokuBullish:      return "Ichimoku\nBulut"
         }
     }
 }
