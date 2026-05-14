@@ -20,6 +20,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
     case ecHFT                = "EC HFT"
     case macdBullish          = "MACD Boğa Sinyali"
     case ichimokuBullish      = "Ichimoku Bulut Üstü"
+    case titanBreakout        = "Titan Kırılımı"
 
     var emoji: String {
         switch self {
@@ -41,6 +42,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .ecHFT:                return "🤖"
         case .macdBullish:          return "〽️"
         case .ichimokuBullish:      return "☁️"
+        case .titanBreakout:        return "⚔️"
         }
     }
 
@@ -64,6 +66,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .ecHFT:                return "strategy_ecHFT"
         case .macdBullish:          return "strategy_macdBullish"
         case .ichimokuBullish:      return "strategy_ichimokuBullish"
+        case .titanBreakout:        return "strategy_titanBreakout"
         }
     }
 }
@@ -92,6 +95,7 @@ extension SignalType {
         case .ecHFT:                return "SuperTrend boğa yönünde + EMA hızlı > EMA yavaş + fiyat > EMA yavaş üçlü onayıyla momentum kırılmalarını yakalar. Tüm parametreler ayarlanabilir."
         case .macdBullish:          return "MACD histogramının negatiften pozitife geçtiği (al verdi) veya geçmek üzere olduğu (3 ardışık yükseliş, sıfıra yakın) hisseleri tespit eder."
         case .ichimokuBullish:      return "Fiyat Ichimoku bulutunun üzerinde, Tenkan-sen > Kijun-sen ve Chikou doğrulaması olan güçlü boğa setuplelarını tespit eder."
+        case .titanBreakout:        return "7 bağımsız koşulun tamamı aynı anda: kırılma + kurumsal hacim + EMA hizalama + MACD ivmesi + RSI tatlı nokta + güçlü kapanış + confluence. En nadir, en güçlü sinyal."
         }
     }
 
@@ -207,6 +211,15 @@ extension SignalType {
                     "Chikou Span: bugünkü kapanış, 26 bar önceki kapanışın üzerinde",
                     "RSI 42–72 arasında, hacim ≥ ortalama × 0.8",
                     "Güçlü: 4 ana koşul + RSI + hacim | Orta: bulut üstü + Tenkan > Kijun"]
+        case .titanBreakout:
+            return ["① Fiyat 20-günlük zirvenin %0.5+ üzerinde kapandı (taze kırılma)",
+                    "② Hacim 20-günlük ortalamanın 2.5 katından fazla (kurumsal akış)",
+                    "③ EMA9 > EMA21 > EMA50 — üç vadede tam boğa hizalaması",
+                    "④ MACD histogramı pozitif VE bir önceki bardan daha yüksek (ivme artıyor)",
+                    "⑤ RSI 50–68 arasında — momentum bölgesi, aşırı alım yok",
+                    "⑥ Kapanış, günün yüksek-düşük aralığının üst %40'ında (güçlü boğa mumu)",
+                    "⑦ Confluence skoru ≥ 3/5 — çoklu sistem onayı",
+                    "⚠️ 7 koşulun TAMAMI sağlanmalı — Güçlü: hacim 3.5x+ VE RSI 55+ VE confluence 4+"]
         }
     }
 
@@ -248,6 +261,8 @@ extension SignalType {
             return "MACD (12/26/9) histogramı momentum yönünü doğrudan ölçer. Histogram negatiften pozitife geçtiğinde satıcı baskısı yerini alıcı baskısına bırakmış demektir — bu 'al verdi' anıdır. Histogram henüz geçmemiş ama hızla yükseliyorsa ve sıfıra çok yakınsa, bir sonraki mum büyük ihtimalle geçişi tamamlayacak — bu 'al vermek üzere' anıdır. İkinci senaryo önceden konumlanma fırsatı sunar ancak daha yüksek risk taşır."
         case .ichimokuBullish:
             return "Ichimoku Kinko Hyo (均衡表) — Japon teknik analizin en kapsamlı sistemi. Tek bir grafikte destek/direnç, trend yönü, momentum ve süre bilgisini birleştirir. 'Bulut üstü' fiyatın güçlü destek bölgesinin üzerinde olduğunu, 'Tenkan > Kijun' kısa vadeli momentumun uzun vadeyi geçtiğini, 'yeşil bulut' orta vadeli trendin boğa yönünde olduğunu, 'Chikou doğrulaması' ise tarihin momentum iddiasını desteklediğini gösterir. Dört bileşenin aynı anda uyum içinde olması nadir ama son derece güçlü bir sinyal üretir."
+        case .titanBreakout:
+            return "Diğer stratejilerin hepsinin bir veya birkaç koşul aradığı yerde Titan 7 koşulu aynı anda arar. Fiyatın yeni zirveyi kırması kurumsal talebi; 2.5x+ hacim akıllı paranın girişini; EMA hizalaması sağlam trendi; MACD ivmesi momentumun hızlandığını; RSI tatlı noktası sürdürülebilir yükselişi; güçlü kapanış gün içi alıcı hakimiyetini; confluence ise birden fazla bağımsız sistemin onayını gösterir. Bu yedi faktörün aynı anda buluşması piyasadaki en nadir ve en güvenilir kurulumlardan biridir. Sinyal geldiğinde dikkate almaya değer."
         }
     }
 
@@ -271,6 +286,7 @@ extension SignalType {
         case .ecHFT:                return "SuperTrend yeni döndü VE EMA kesişimi aynı anda gerçekleşti VE hacim 1.5x+ → Güçlü. Aksi halde → Orta."
         case .macdBullish:          return "Histogram negatiften pozitife geçtiyse Güçlü. Histogram hâlâ negatif ama sıfıra yaklaşıyorsa Orta."
         case .ichimokuBullish:      return "Tenkan > Kijun + Bulut üstü + Yeşil bulut + Chikou doğrulaması + RSI 50+ + Hacim 1x+ → Güçlü. Bulut üstü + Tenkan > Kijun (diğerleri eksik) → Orta."
+        case .titanBreakout:        return "7 koşulun tamamı + hacim 3.5x+ VE RSI 55+ VE confluence 4+ → Güçlü. 7 koşulun tamamı (güçlü kriterleri eksik) → Orta. 6 koşul → sinyal üretilmez."
         }
     }
 
@@ -294,6 +310,7 @@ extension SignalType {
         case .ecHFT:                return "Orta Sıklıkta"
         case .macdBullish:          return "Sık"
         case .ichimokuBullish:      return "Seyrek"
+        case .titanBreakout:        return "Çok Seyrek"
         }
     }
 }

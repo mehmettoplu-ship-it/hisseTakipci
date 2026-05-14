@@ -340,6 +340,7 @@ struct ScannerView: View {
         case .ecHFT:                return Color(red: 0.5,  green: 0.2,  blue: 0.9)
         case .macdBullish:          return Color(red: 0.0,  green: 0.65, blue: 0.75)
         case .ichimokuBullish:      return Color(red: 0.15, green: 0.6,  blue: 0.35)
+        case .titanBreakout:        return Color(red: 0.85, green: 0.1,  blue: 0.2)
         }
     }
 
@@ -437,6 +438,7 @@ struct ScannerView: View {
         case .ecHFT:                return "EC\nHFT"
         case .macdBullish:          return "MACD\nBoğa"
         case .ichimokuBullish:      return "Ichimoku\nBulut"
+        case .titanBreakout:        return "Titan\nKırılım"
         }
     }
 }

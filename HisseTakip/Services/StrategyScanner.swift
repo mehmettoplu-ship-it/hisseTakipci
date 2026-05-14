@@ -525,6 +525,49 @@ enum StrategyScanner {
         }
 
         // ─────────────────────────────────────────────────────────────────
+        // 19. TİTAN KIRILIMI — 7 Koşulun Tamamı
+        // En nadir, en güçlü kurulum. 6 koşul yetmez, 7 gerekir.
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.titanBreakout) {
+            let high20 = candles.suffix(21).dropLast().map(\.high).max() ?? 0
+
+            // ① Taze kırılma
+            let breakout = price > high20 * 1.005
+
+            // ② Kurumsal hacim
+            let heavyVolume = volRatio >= 2.5
+
+            // ③ EMA tam hizalama
+            let emaAligned = ind.ema9 > ind.ema21 && ind.ema21 > ind.ema50
+
+            // ④ MACD pozitif VE önceki bardan yüksek (ivme artıyor)
+            let (_, _, prevHistArr) = TechnicalAnalysis.macd(closes: prevClosesArr)
+            let prevHist = prevHistArr.last ?? 0
+            let macdAccel = ind.macdHistogram > 0 && ind.macdHistogram > prevHist
+
+            // ⑤ RSI tatlı nokta: momentum var ama aşırı alım değil
+            let rsiSweet = ind.rsi >= 50 && ind.rsi <= 68
+
+            // ⑥ Güçlü mum kapanışı — günün üst %40'ında
+            let range = lastCandle.high - lastCandle.low
+            let strongClose = range > 0 && (lastCandle.close - lastCandle.low) / range > 0.60
+
+            // ⑦ Confluence ≥ 3
+            let confluenceOk = confluence >= 3
+
+            // 7 koşulun tamamı
+            if breakout && heavyVolume && emaAligned && macdAccel && rsiSweet && strongClose && confluenceOk {
+                let isStrong = volRatio >= 3.5 && ind.rsi > 55 && confluence >= 4
+                signals.append(make(
+                    stock: stock, type: .titanBreakout,
+                    strength: isStrong ? .strong : .moderate,
+                    timeframe: timeframe, price: price, ind: ind,
+                    volRatio: volRatio, dailyChange: dailyChange
+                ))
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
         // 17. MACD BOĞA SİNYALİ
         // Histogram negatiften pozitife geçti (al verdi) — GÜÇLÜ
         // Histogram negatif ama 3 ardışık bar yükseliyor ve sıfıra yakın — ORTA
