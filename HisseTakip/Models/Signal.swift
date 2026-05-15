@@ -284,7 +284,7 @@ extension SignalType {
         case .vcpBreakout:          return "Hacim 4x+ VE RSI 62+ → Güçlü. 3–4x hacim arası → Orta."
         case .descendingBreakout:   return "Hacim 2x+ VE RSI 42+ VE MACD histogramı pozitif → Güçlü. Aksi halde Orta."
         case .ecHFT:                return "SuperTrend yeni döndü VE EMA kesişimi aynı anda gerçekleşti VE hacim 1.5x+ → Güçlü. Aksi halde → Orta."
-        case .macdBullish:          return "Histogram negatiften pozitife geçtiyse Güçlü. Histogram hâlâ negatif ama sıfıra yaklaşıyorsa Orta."
+        case .macdBullish:          return "4+ ardışık negatif histogramdan pozitife gerçek kesişim + EMA21 üstü + EMA9>EMA21. Hacim 1.5x+ VE RSI 50+ VE histogram fiyatın ‰1'i üstü → Güçlü."
         case .ichimokuBullish:      return "Tenkan > Kijun + Bulut üstü + Yeşil bulut + Chikou doğrulaması + RSI 50+ + Hacim 1x+ → Güçlü. Bulut üstü + Tenkan > Kijun (diğerleri eksik) → Orta."
         case .titanBreakout:        return "7 koşulun tamamı + hacim 3.5x+ VE RSI 55+ VE confluence 4+ → Güçlü. 7 koşulun tamamı (güçlü kriterleri eksik) → Orta. 6 koşul → sinyal üretilmez."
         }

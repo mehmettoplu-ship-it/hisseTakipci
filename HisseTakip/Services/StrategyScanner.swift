@@ -71,9 +71,13 @@ enum StrategyScanner {
                 let h52 = candles[s..<idx].map(\.high).max() ?? 0
                 return h52 > 0 && c.close > h52
             case .macdBullish:
-                let hi = fullHistArr.count - 1 - k
-                guard hi >= 0 else { return false }
+                let hi  = fullHistArr.count - 1 - k
+                let e9i = fullEma9Arr.count  - 1 - k
+                let e21i = fullEma21Arr.count - 1 - k
+                guard hi >= 0 && e9i >= 0 && e21i >= 0 else { return false }
                 return fullHistArr[hi] > 0
+                    && c.close > fullEma21Arr[e21i]
+                    && fullEma9Arr[e9i] > fullEma21Arr[e21i]
             case .ichimokuBullish:
                 guard idx >= 77 else { return false }
                 guard let ichi = TechnicalAnalysis.ichimoku(candles: Array(candles.prefix(idx + 1)))
@@ -551,29 +555,50 @@ enum StrategyScanner {
         }
 
         // ─────────────────────────────────────────────────────────────────
-        // 17. MACD BOĞA SİNYALİ
-        // Histogram negatiften pozitife geçti (al verdi) — GÜÇLÜ
-        // Histogram negatif ama 3 ardışık bar yükseliyor ve sıfıra yakın — ORTA
+        // 17. MACD BOĞA KESİŞİMİ — Günlük & 4 Saatlik İçin Optimize Edildi
+        //
+        // Yalnızca GERÇEK crossover: histogram negatiften pozitife geçti
+        // "About to give" kaldırıldı — choppy piyasada çok gürültü üretiyordu
+        //
+        // Kalite filtresi — 4 ek koşul:
+        //   ① Sürdürülmüş negatif: crossover'dan önce en az 4 ardışık negatif bar
+        //      (choppy 1-2 bar dip'ten sahte crossover'ları eliyor)
+        //   ② EMA21 trendi: fiyat EMA21'in üstünde (boğa bağlamı)
+        //   ③ EMA9 > EMA21: kısa vadeli momentum yukarı
+        //   ④ Histogram büyüklüğü: ilk pozitif bar anlamlı derinlikte
         // ─────────────────────────────────────────────────────────────────
         if enabledStrategies.contains(.macdBullish) {
-            if fullHistArr.count >= 3 {
-                let h0 = fullHistArr[fullHistArr.count - 1]   // son bar
-                let h1 = fullHistArr[fullHistArr.count - 2]   // önceki bar
-                let h2 = fullHistArr[fullHistArr.count - 3]   // 2 bar önce
+            if fullHistArr.count >= 6 {
+                let h0 = fullHistArr[fullHistArr.count - 1]
+                let h1 = fullHistArr[fullHistArr.count - 2]
+                let h2 = fullHistArr[fullHistArr.count - 3]
+                let h3 = fullHistArr[fullHistArr.count - 4]
+                let h4 = fullHistArr[fullHistArr.count - 5]
 
-                let crossoverHappened = h0 > 0 && h1 < 0
-                let ascending3        = h0 > h1 && h1 > h2
-                let nearZero          = h0 < 0 && h0 > -(price * 0.003)
-                let aboutToGive       = !crossoverHappened && ascending3 && nearZero
+                // ① Gerçek crossover — h1 negatif, h0 pozitife geçti
+                let crossover = h0 > 0 && h1 < 0
 
-                if crossoverHappened || aboutToGive {
-                    let rsiOk       = ind.rsi > 30 && ind.rsi < 72
-                    let notFreefall = price >= ind.ema50 * 0.90
-                    let volOk       = volCandle.volume >= ind.avgVolume20 * 0.75
+                // ② Sürdürülmüş negatif histogram: h1, h2, h3, h4 hepsi < 0
+                //    Gerçek satış dönemi sonrası crossover; 1-2 bar dip'ten sahte değil
+                let sustainedNeg = h1 < 0 && h2 < 0 && h3 < 0 && h4 < 0
 
-                    if rsiOk && notFreefall && volOk {
-                        signals.append(makeS(.macdBullish, crossoverHappened ? .strong : .moderate))
-                    }
+                // ③ Histogram anlamlı büyüklükte pozitife geçti (gürültü değil)
+                //    İlk yeşil bar, son kırmızı barın mutlak değerinin en az %20'si kadar
+                let histMomentum = h0 > abs(h1) * 0.2
+
+                // ④ Trend bağlamı: fiyat EMA21 üzerinde, EMA9 > EMA21 (kısa trend yukarı)
+                let trendContext = price > ind.ema21 && ind.ema9 > ind.ema21
+
+                // ⑤ RSI tatlı nokta: momentum var ama aşırı alım değil
+                let rsiOk = ind.rsi > 42 && ind.rsi < 65
+
+                // ⑥ Hacim onayı — en az ortalama (gürültülü hacimde crossover güvenilmez)
+                let volOk = volCandle.volume >= ind.avgVolume20 * 1.0
+
+                if crossover && sustainedNeg && histMomentum && trendContext && rsiOk && volOk {
+                    // Güçlü: hacim 1.5x+, RSI 50+, histogram belirgin (fiyatın ‰1'i üstü)
+                    let isStrong = volRatio >= 1.5 && ind.rsi > 50 && h0 > price * 0.001
+                    signals.append(makeS(.macdBullish, isStrong ? .strong : .moderate))
                 }
             }
         }
