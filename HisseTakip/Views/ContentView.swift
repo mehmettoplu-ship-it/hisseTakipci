@@ -29,6 +29,10 @@ struct ContentView: View {
                 .badge(multiSignalStockCount > 0 ? multiSignalStockCount : 0)
                 .tag(3)
 
+            PerformanceView()
+                .tabItem { Label("Performans", systemImage: "chart.bar.fill") }
+                .tag(7)
+
             BilancoView()
                 .tabItem { Label("Bilanço", systemImage: "building.columns.fill") }
                 .tag(4)

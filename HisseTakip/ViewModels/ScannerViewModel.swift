@@ -207,27 +207,31 @@ final class ScannerViewModel: ObservableObject {
                 try? await Task.sleep(for: .milliseconds(120))
             }
             currentSymbol = chunk.first?.0.symbol
-            await withTaskGroup(of: ([Signal], FailedStock?).self) { group in
+            await withTaskGroup(of: ([Signal], FailedStock?, (String, Double)?).self) { group in
                 for (stock, timeframe) in chunk {
                     group.addTask {
-                        guard !Task.isCancelled else { return ([], nil) }
+                        guard !Task.isCancelled else { return ([], nil, nil) }
                         do {
                             let candles = try await YahooFinanceService.shared
                                 .fetchCandles(symbol: stock.id, timeframe: timeframe)
                             let sigs = StrategyScanner.scan(
                                 stock: stock, candles: candles,
                                 timeframe: timeframe, enabledStrategies: strategies)
-                            return (sigs, nil)
+                            let latestPrice = candles.last?.close
+                            return (sigs, nil, latestPrice.map { (stock.symbol, $0) })
                         } catch FetchError.noData {
-                            return ([], nil)
+                            return ([], nil, nil)
                         } catch {
-                            return ([], FailedStock(stock: stock, timeframe: timeframe))
+                            return ([], FailedStock(stock: stock, timeframe: timeframe), nil)
                         }
                     }
                 }
-                for await (partialSignals, failed) in group {
+                for await (partialSignals, failed, priceUpdate) in group {
                     newSignals.append(contentsOf: partialSignals)
                     liveSignalCount += partialSignals.count
+                    if let (sym, price) = priceUpdate {
+                        SignalHistoryManager.shared.updatePrice(symbol: sym, price: price)
+                    }
                     if let f = failed {
                         fetchErrors  += 1
                         failedStocks.append(f)
@@ -252,6 +256,7 @@ final class ScannerViewModel: ObservableObject {
             signals      = newSignals
             lastScanDate = Date()
             saveSignals()
+            SignalHistoryManager.shared.save(signals: newSignals)
         }
         isScanning = false
     }
