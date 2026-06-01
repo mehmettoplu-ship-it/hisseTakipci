@@ -5,6 +5,7 @@ struct ContentView: View {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("scanOnLaunch") private var scanOnLaunch = false
     @State var selectedTab = 0
+    @State private var wentToBackground = false
 
     private var multiSignalStockCount: Int {
         Dictionary(grouping: scanner.signals, by: \.stock).filter { $0.value.count >= 2 }.count
@@ -61,10 +62,12 @@ struct ContentView: View {
             scanner.startAutoScan()
         }
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                scanner.startAutoScan()
-            } else if newPhase == .background {
+            if newPhase == .background {
+                wentToBackground = true
                 scanner.stopAutoScan()
+            } else if newPhase == .active && wentToBackground {
+                wentToBackground = false
+                scanner.startAutoScan()
             }
         }
     }

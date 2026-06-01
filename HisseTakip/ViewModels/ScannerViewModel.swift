@@ -23,6 +23,7 @@ final class ScannerViewModel: ObservableObject {
     @Published var scanDuration: TimeInterval? = nil
     @Published var failedStocks: [FailedStock] = []
     @Published var liveSignalCount: Int  = 0
+    @Published var scanTotal: Int        = 0
 
     private var scanTask: Task<Void, Never>?
     private var autoScanTask: Task<Void, Never>?
@@ -59,6 +60,21 @@ final class ScannerViewModel: ObservableObject {
     // MARK: - Otomatik Tarama (15 dk)
 
     func startAutoScan() {
+        // Mevcut tarama devam ediyorsa sadece timer'ı yeniden başlat, taramayı iptal etme
+        if isScanning {
+            autoScanTask?.cancel()
+            autoScanTask = Task { @MainActor [weak self] in
+                guard let self else { return }
+                while !Task.isCancelled {
+                    let nextInterval = self.autoScanIntervalSeconds
+                    try? await Task.sleep(for: .seconds(nextInterval))
+                    if !Task.isCancelled && !self.isScanning {
+                        await self.performScan()
+                    }
+                }
+            }
+            return
+        }
         autoScanTask?.cancel()
         autoScanTask = Task { @MainActor [weak self] in
             guard let self else { return }
@@ -192,6 +208,7 @@ final class ScannerViewModel: ObservableObject {
         let strategies = enabledStrategies
         let pairs      = stocks.flatMap { s in timeframes.map { tf in (s, tf) } }
         let total      = Double(pairs.count)
+        scanTotal      = pairs.count
         let chunkSize  = 5   // Yahoo rate-limit'i azaltmak için küçük tutuldu
 
         let chunks = stride(from: 0, to: pairs.count, by: chunkSize).map {

@@ -22,6 +22,8 @@ struct ScannerView: View {
                     scanningView
                 } else if !vm.signals.isEmpty {
                     resultsView
+                } else if vm.lastScanDate != nil {
+                    noSignalsView
                 } else {
                     idleView
                 }
@@ -182,7 +184,7 @@ struct ScannerView: View {
             }
 
             VStack(spacing: 8) {
-                Text("\(vm.scannedCount) / \(vm.stockList.count * vm.selectedTimeframes.count)")
+                Text("\(vm.scannedCount) / \(vm.scanTotal > 0 ? vm.scanTotal : vm.stockList.count * vm.selectedTimeframes.count)")
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundStyle(.primary)
 
@@ -344,6 +346,55 @@ struct ScannerView: View {
         case .ichimokuBullish:      return Color(red: 0.15, green: 0.6,  blue: 0.35)
         case .titanBreakout:        return Color(red: 0.85, green: 0.1,  blue: 0.2)
         }
+    }
+
+    // MARK: - Sinyal Bulunamadı
+
+    private var noSignalsView: some View {
+        VStack(spacing: 16) {
+            ZStack {
+                Circle()
+                    .fill(RadialGradient(
+                        colors: [Color.orange.opacity(0.15), .clear],
+                        center: .center, startRadius: 0, endRadius: 55))
+                    .frame(width: 110, height: 110)
+                Image(systemName: "magnifyingglass.circle")
+                    .font(.system(size: 44, weight: .medium))
+                    .foregroundStyle(LinearGradient(
+                        colors: [.orange, .yellow],
+                        startPoint: .top, endPoint: .bottom))
+            }
+
+            VStack(spacing: 6) {
+                Text("Sinyal Bulunamadı")
+                    .font(.title3.weight(.bold))
+                Text("Piyasa koşulları şu an hiçbir\nstrateji koşulunu karşılamıyor.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+
+            if vm.fetchErrors > 0 {
+                Button {
+                    showFailedSheet = true
+                } label: {
+                    Label("\(vm.fetchErrors) hisse veri hatası — detay için tıkla",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color(red: 1.0, green: 0.45, blue: 0.1))
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(Color(red: 1.0, green: 0.45, blue: 0.1).opacity(0.12))
+                        .clipShape(Capsule())
+                }
+            }
+
+            if let dur = vm.scanDuration {
+                Label(durationLabel(dur), systemImage: "timer")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Boş Ekran
