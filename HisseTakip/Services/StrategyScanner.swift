@@ -8,10 +8,11 @@ enum StrategyScanner {
         timeframe: Timeframe,
         enabledStrategies: Set<SignalType> = Set(SignalType.allCases)
     ) -> [Signal] {
+        let minVol = Double(UserDefaults.standard.integer(forKey: "minAvgVolume"))
         guard let ind = TechnicalAnalysis.calculate(candles: candles),
               let lastCandle = candles.last,
               let prevCandle = candles.dropLast().last,
-              ind.avgVolume20 >= 50_000
+              ind.avgVolume20 >= max(1, minVol)
         else { return [] }
 
         var signals: [Signal] = []

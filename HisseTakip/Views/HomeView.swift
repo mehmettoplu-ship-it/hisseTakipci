@@ -59,6 +59,7 @@ struct HomeView: View {
             ScrollView {
                 VStack(spacing: 22) {
                     bist100Card
+                    firstScanBanner
                     quickStats
                     topPicksSection
                     favoritesSection
@@ -92,6 +93,45 @@ struct HomeView: View {
                 SectorStocksView(sectorName: sid.name)
                     .environmentObject(scanner)
             }
+        }
+    }
+
+    // MARK: - İlk Tarama Banner
+
+    @ViewBuilder
+    private var firstScanBanner: some View {
+        if scanner.lastScanDate == nil && !scanner.isScanning {
+            Button { scanner.startScan() } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("İlk Taramayı Başlat")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(.white)
+                        Text("Hisseleri analiz et, sinyal bul")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                .padding(.horizontal, 18)
+                .padding(.vertical, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .fill(LinearGradient(
+                            colors: [Color(red: 0.1, green: 0.85, blue: 0.55),
+                                     Color(red: 0.0, green: 0.55, blue: 0.35)],
+                            startPoint: .leading, endPoint: .trailing))
+                )
+                .shadow(color: Color(red: 0.1, green: 0.85, blue: 0.55).opacity(0.35),
+                        radius: 12, y: 4)
+            }
+            .buttonStyle(.plain)
         }
     }
 

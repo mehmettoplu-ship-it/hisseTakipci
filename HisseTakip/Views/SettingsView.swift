@@ -8,6 +8,7 @@ struct SettingsView: View {
     @AppStorage("minRSIFilter")            private var minRSIFilter: Double  = 0
     @AppStorage("maxRSIFilter")            private var maxRSIFilter: Double  = 100
     @AppStorage("autoScanIntervalMinutes") private var autoScanInterval: Int = 15
+    @AppStorage("minAvgVolume")            private var minAvgVolume: Int      = 5_000
 
     @AppStorage("ecHFT_atrPeriod")  private var ecHFT_atrPeriod:  Int    = 10
     @AppStorage("ecHFT_multiplier") private var ecHFT_multiplier: Double = 1.5
@@ -105,7 +106,29 @@ struct SettingsView: View {
             intervalPickerRow
             rowDivider
             rsiFilterRow
+            rowDivider
+            volumeFilterRow
         }
+    }
+
+    private var volumeFilterRow: some View {
+        HStack(spacing: 12) {
+            iconBox("chart.bar.fill", color: Color(red: 0.2, green: 0.5, blue: 1.0))
+            Text("Min. Ort. Hacim")
+                .font(.system(size: 15, weight: .medium))
+            Spacer()
+            Picker("", selection: $minAvgVolume) {
+                Text("Filtre Yok").tag(0)
+                Text("1.000").tag(1_000)
+                Text("5.000").tag(5_000)
+                Text("10.000").tag(10_000)
+                Text("50.000").tag(50_000)
+            }
+            .pickerStyle(.menu)
+            .tint(Color(red: 0.2, green: 0.5, blue: 1.0))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 14)
     }
 
     private var intervalPickerRow: some View {
