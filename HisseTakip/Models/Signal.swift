@@ -21,6 +21,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
     case macdBullish          = "MACD Boğa Sinyali"
     case ichimokuBullish      = "Ichimoku Bulut Üstü"
     case titanBreakout        = "Titan Kırılımı"
+    case sma50Pullback        = "SMA50 Çekilme & Kırılma"
 
     var emoji: String {
         switch self {
@@ -43,6 +44,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .macdBullish:          return "〽️"
         case .ichimokuBullish:      return "☁️"
         case .titanBreakout:        return "⚔️"
+        case .sma50Pullback:        return "📉"
         }
     }
 
@@ -67,6 +69,7 @@ enum SignalType: String, Codable, CaseIterable, Identifiable {
         case .macdBullish:          return "strategy_macdBullish"
         case .ichimokuBullish:      return "strategy_ichimokuBullish"
         case .titanBreakout:        return "strategy_titanBreakout"
+        case .sma50Pullback:        return "strategy_sma50Pullback"
         }
     }
 }
@@ -96,6 +99,7 @@ extension SignalType {
         case .macdBullish:          return "MACD histogramının negatiften pozitife geçtiği (al verdi) veya geçmek üzere olduğu (3 ardışık yükseliş, sıfıra yakın) hisseleri tespit eder."
         case .ichimokuBullish:      return "Fiyat Ichimoku bulutunun üzerinde, Tenkan-sen > Kijun-sen ve Chikou doğrulaması olan güçlü boğa setuplelarını tespit eder."
         case .titanBreakout:        return "7 bağımsız koşulun tamamı aynı anda: kırılma + kurumsal hacim + EMA hizalama + MACD ivmesi + RSI tatlı nokta + güçlü kapanış + confluence. En nadir, en güçlü sinyal."
+        case .sma50Pullback:        return "Hareket başlamış hissenin 50 günlük SMA'ya sağlıklı çekilmesini veya SMA50'yi hacimle kırmasını tespit eder. İki farklı giriş fırsatı: düşük hacimli çekilme (ideal giriş) veya yüksek hacimli kırılma (teyitli giriş)."
         }
     }
 
@@ -211,6 +215,18 @@ extension SignalType {
                     "Chikou Span: bugünkü kapanış, 26 bar önceki kapanışın üzerinde",
                     "RSI 42–72 arasında, hacim ≥ ortalama × 0.8",
                     "Güçlü: 4 ana koşul + RSI + hacim | Orta: bulut üstü + Tenkan > Kijun"]
+        case .sma50Pullback:
+            return ["SMA50 yükselen eğimde (10 bar öncesinden daha yüksek)",
+                    "── Setup A: Çekilme ──",
+                    "Önceki mum SMA50'nin belirgin üzerindeydi (%1+)",
+                    "Fiyat SMA50'nin ±%2 bandına çekildi",
+                    "Çekilmede hacim düşük (< ort. × 1.2) — sağlıklı konsolidasyon",
+                    "Son mum boğa mumu, RSI 38–58 arası",
+                    "── Setup B: Kırılma ──",
+                    "Önceki kapanış SMA50'de veya altında",
+                    "Şu anki kapanış SMA50'nin %0.5+ üzerinde",
+                    "Hacim ≥ ortalama × 1.5 (kırılma teyidi)",
+                    "RSI 45–68 arası, Confluence ≥ 2/5"]
         case .titanBreakout:
             return ["① Fiyat 20-günlük zirvenin %0.5+ üzerinde kapandı (taze kırılma)",
                     "② Hacim 20-günlük ortalamanın 2.5 katından fazla (kurumsal akış)",
@@ -261,6 +277,8 @@ extension SignalType {
             return "MACD (12/26/9) histogramı momentum yönünü doğrudan ölçer. Histogram negatiften pozitife geçtiğinde satıcı baskısı yerini alıcı baskısına bırakmış demektir — bu 'al verdi' anıdır. Histogram henüz geçmemiş ama hızla yükseliyorsa ve sıfıra çok yakınsa, bir sonraki mum büyük ihtimalle geçişi tamamlayacak — bu 'al vermek üzere' anıdır. İkinci senaryo önceden konumlanma fırsatı sunar ancak daha yüksek risk taşır."
         case .ichimokuBullish:
             return "Ichimoku Kinko Hyo (均衡表) — Japon teknik analizin en kapsamlı sistemi. Tek bir grafikte destek/direnç, trend yönü, momentum ve süre bilgisini birleştirir. 'Bulut üstü' fiyatın güçlü destek bölgesinin üzerinde olduğunu, 'Tenkan > Kijun' kısa vadeli momentumun uzun vadeyi geçtiğini, 'yeşil bulut' orta vadeli trendin boğa yönünde olduğunu, 'Chikou doğrulaması' ise tarihin momentum iddiasını desteklediğini gösterir. Dört bileşenin aynı anda uyum içinde olması nadir ama son derece güçlü bir sinyal üretir."
+        case .sma50Pullback:
+            return "50 günlük SMA başarılı hisselerin 'taban' seviyesidir. Yükselen bir SMA50'ye çekilen hisse, kurumsal yatırımcıların bu seviyeyi destek olarak kullandığını gösterir. Hacim kuruması satıcıların değil, kar realize edenlerin geri çekildiğini işaret eder. Kırılma senaryosunda ise hisse uzunca süre SMA50'nin altındayken güçlü hacimle üstüne geçiyorsa — bu trend değişiminin ilk onayıdır."
         case .titanBreakout:
             return "Diğer stratejilerin hepsinin bir veya birkaç koşul aradığı yerde Titan 7 koşulu aynı anda arar. Fiyatın yeni zirveyi kırması kurumsal talebi; 2.5x+ hacim akıllı paranın girişini; EMA hizalaması sağlam trendi; MACD ivmesi momentumun hızlandığını; RSI tatlı noktası sürdürülebilir yükselişi; güçlü kapanış gün içi alıcı hakimiyetini; confluence ise birden fazla bağımsız sistemin onayını gösterir. Bu yedi faktörün aynı anda buluşması piyasadaki en nadir ve en güvenilir kurulumlardan biridir. Sinyal geldiğinde dikkate almaya değer."
         }
@@ -287,6 +305,7 @@ extension SignalType {
         case .macdBullish:          return "4+ ardışık negatif histogramdan pozitife gerçek kesişim + EMA21 üstü + EMA9>EMA21. Hacim 1.5x+ VE RSI 50+ VE histogram fiyatın ‰1'i üstü → Güçlü."
         case .ichimokuBullish:      return "Tenkan > Kijun + Bulut üstü + Yeşil bulut + Chikou doğrulaması + RSI 50+ + Hacim 1x+ → Güçlü. Bulut üstü + Tenkan > Kijun (diğerleri eksik) → Orta."
         case .titanBreakout:        return "7 koşulun tamamı + hacim 3.5x+ VE RSI 55+ VE confluence 4+ → Güçlü. 7 koşulun tamamı (güçlü kriterleri eksik) → Orta. 6 koşul → sinyal üretilmez."
+        case .sma50Pullback:        return "Çekilme: fiyat SMA50'nin %0.8 içinde VE RSI 42+ → Güçlü. Kırılma: hacim 2x+ VE RSI 52+ → Güçlü."
         }
     }
 
@@ -311,6 +330,7 @@ extension SignalType {
         case .macdBullish:          return "Sık"
         case .ichimokuBullish:      return "Seyrek"
         case .titanBreakout:        return "Çok Seyrek"
+        case .sma50Pullback:        return "Orta Sıklıkta"
         }
     }
 }

@@ -149,6 +149,10 @@ enum StrategyScanner {
                 let e21i = fullEma21Arr.count - 1 - k
                 guard e21i >= 0 else { return false }
                 return c.close > fullEma21Arr[e21i] * 0.95
+            case .sma50Pullback:
+                guard allCloses.count > idx + 1 && idx >= 49 else { return false }
+                let pastSma50 = Array(allCloses.prefix(idx + 1)).suffix(50).reduce(0,+) / 50.0
+                return pastSma50 > 0 && c.close >= pastSma50 * 0.985
             default:
                 return false
             }
@@ -686,6 +690,44 @@ enum StrategyScanner {
             if aboveCloud && tenkanAboveKijun && volOk {
                 let isStrong = greenCloud && ichi.chikouAbove && rsiOk && ind.rsi > 50
                 signals.append(makeS(.ichimokuBullish, isStrong ? .strong : .moderate))
+            }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // 20. SMA50 ÇEKİLME & KIRILMA
+        // Setup A — Çekilme: hareket başlamış hissenin 50G SMA'ya düşük hacimli dönüşü
+        // Setup B — Kırılma: uzunca altında kalan hissenin güçlü hacimle SMA50'yi geçmesi
+        // ─────────────────────────────────────────────────────────────────
+        if enabledStrategies.contains(.sma50Pullback), candles.count >= 60 {
+            let sma50 = allCloses.suffix(50).reduce(0,+) / 50.0
+            let prevSma50 = prevClosesArr.count >= 50
+                ? prevClosesArr.suffix(50).reduce(0,+) / 50.0 : 0.0
+            let olderSma50 = Array(allCloses.dropLast(10)).suffix(50).reduce(0,+) / 50.0
+            let sma50Rising = sma50 > olderSma50
+
+            if sma50 > 0 && sma50Rising {
+                // ── Setup A: Çekilme ──
+                let nearSma50   = price >= sma50 * 0.985 && price <= sma50 * 1.02
+                let wasAboveSma = prevCandle.close > prevSma50 * 1.01
+                let pullbackVol = volCandle.volume < ind.avgVolume20 * 1.2
+                let bullishBar  = lastCandle.close > lastCandle.open
+                let rsiPullback = ind.rsi > 38 && ind.rsi < 58
+
+                if nearSma50 && wasAboveSma && pullbackVol && bullishBar && rsiPullback && confluence >= 2 {
+                    let isStrong = price <= sma50 * 1.008 && ind.rsi > 42
+                    signals.append(makeS(.sma50Pullback, isStrong ? .strong : .moderate))
+                }
+                // ── Setup B: Kırılma ──
+                else {
+                    let crossedAbove = prevCandle.close <= prevSma50 * 1.005 && price > sma50 * 1.005
+                    let breakoutVol  = volCandle.volume >= ind.avgVolume20 * 1.5
+                    let rsiBreakout  = ind.rsi > 45 && ind.rsi < 68
+
+                    if crossedAbove && breakoutVol && rsiBreakout && confluence >= 2 {
+                        let isStrong = volRatio >= 2.0 && ind.rsi > 52
+                        signals.append(makeS(.sma50Pullback, isStrong ? .strong : .moderate))
+                    }
+                }
             }
         }
 
